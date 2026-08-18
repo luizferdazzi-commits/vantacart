@@ -38,33 +38,12 @@ export async function saveDraft(input:{cjProductId:string;name:string;imageUrl?:
   const sql=sqlClient();
   const rows=await sql`INSERT INTO catalog_products (cj_product_id,name,image_url,cj_cost,sale_price,status)
     VALUES (${input.cjProductId},${input.name},${input.imageUrl||null},${input.cost},${input.price},'DRAFT')
-    ON CONFLICT (cj_product_id) DO UPDATE SET
-      name=EXCLUDED.name,
-      image_url=EXCLUDED.image_url,
-      cj_cost=EXCLUDED.cj_cost,
-      sale_price=EXCLUDED.sale_price,
-      updated_at=NOW()
+    ON CONFLICT (cj_product_id) DO UPDATE SET name=EXCLUDED.name,image_url=EXCLUDED.image_url,cj_cost=EXCLUDED.cj_cost,sale_price=EXCLUDED.sale_price,updated_at=NOW()
     RETURNING *`;
   return rows[0] as CatalogProduct;
 }
 
-export async function listCatalog(){
-  await ensureCatalog();
-  const sql=sqlClient();
-  const rows=await sql`SELECT * FROM catalog_products ORDER BY created_at DESC`;
-  return rows as CatalogProduct[];
-}
-
-export async function listActiveCatalog(){
-  await ensureCatalog();
-  const sql=sqlClient();
-  const rows=await sql`SELECT * FROM catalog_products WHERE status='ACTIVE' ORDER BY updated_at DESC`;
-  return rows as CatalogProduct[];
-}
-
-export async function updateCatalogProduct(id:number,input:{salePrice:number;status:'DRAFT'|'ACTIVE'|'ARCHIVED'}){
-  await ensureCatalog();
-  const sql=sqlClient();
-  const rows=await sql`UPDATE catalog_products SET sale_price=${input.salePrice},status=${input.status},updated_at=NOW() WHERE id=${id} RETURNING *`;
-  return rows[0] as CatalogProduct|undefined;
-}
+export async function listCatalog(){await ensureCatalog();const sql=sqlClient();return await sql`SELECT * FROM catalog_products ORDER BY created_at DESC` as CatalogProduct[];}
+export async function listActiveCatalog(){await ensureCatalog();const sql=sqlClient();return await sql`SELECT * FROM catalog_products WHERE status='ACTIVE' ORDER BY updated_at DESC` as CatalogProduct[];}
+export async function getActiveProduct(cjProductId:string){await ensureCatalog();const sql=sqlClient();const rows=await sql`SELECT * FROM catalog_products WHERE cj_product_id=${cjProductId} AND status='ACTIVE' LIMIT 1`;return rows[0] as CatalogProduct|undefined;}
+export async function updateCatalogProduct(id:number,input:{salePrice:number;status:'DRAFT'|'ACTIVE'|'ARCHIVED'}){await ensureCatalog();const sql=sqlClient();const rows=await sql`UPDATE catalog_products SET sale_price=${input.salePrice},status=${input.status},updated_at=NOW() WHERE id=${id} RETURNING *`;return rows[0] as CatalogProduct|undefined;}
