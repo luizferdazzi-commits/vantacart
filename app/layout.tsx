@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import './marketplace.css';
+import './cart.css';
 
 export const metadata: Metadata = {
   title: 'VantaCart — Global Marketplace',
