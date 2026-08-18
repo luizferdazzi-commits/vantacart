@@ -1,38 +1,50 @@
 import Link from 'next/link';
-import {Search,MapPin,ShoppingCart,Menu,ShieldCheck,PackageCheck,Headphones,Globe2,Truck,RotateCcw,Star,ArrowRight} from 'lucide-react';
+import {Search,MapPin,ShoppingCart,Menu,ShieldCheck,PackageCheck,Headphones,Truck,RotateCcw,Star,ArrowRight,UserRound,Box,Tag,LockKeyhole,LifeBuoy,Globe2,Plane,CheckCircle2} from 'lucide-react';
 import {listActiveCatalog} from '@/lib/db';
 
 export const dynamic='force-dynamic';
 
+const categories=[
+  ['🎧','Electronics'],['🛋️','Home & Living'],['🧴','Beauty & Health'],['👜','Fashion'],['🐶','Pet Supplies'],['🏋️','Sports & Outdoors'],['🧸','Toys & Games'],['🚗','Automotive'],['•••','More Categories']
+];
+
 export default async function Home(){
  let products=[] as Awaited<ReturnType<typeof listActiveCatalog>>; let error='';
  try{products=await listActiveCatalog();}catch(e){error=e instanceof Error?e.message:'Catalog unavailable';}
- return <main className="storefront">
-   <header>
-    <div className="marketTop"><div className="marketTopInner">
-      <Link href="/" className="marketLogo">Vanta<span>Cart</span></Link>
-      <div className="deliverBox"><MapPin size={18}/><div><small>Deliver to</small><b>Worldwide</b></div></div>
-      <form className="searchBar" action="/#shop"><select className="searchCategory" aria-label="Category"><option>All</option><option>Home</option><option>Beauty</option><option>Electronics</option><option>Fashion</option></select><input className="searchInput" placeholder="Search VantaCart" aria-label="Search products"/><button className="searchButton" type="submit" aria-label="Search"><Search size={20}/></button></form>
-      <div className="marketMini accountHide"><div><small>Hello, sign in</small><b>Account & Lists</b></div></div>
-      <div className="marketMini accountHide"><div><small>Returns</small><b>& Orders</b></div></div>
-      <a className="cartBox" href="#shop"><ShoppingCart size={26}/><span>Cart</span></a>
-    </div></div>
-    <div className="marketSubnav"><div className="marketSubnavInner"><span style={{display:'flex',alignItems:'center',gap:6}}><Menu size={17}/> All</span><a href="#shop">Today's picks</a><a href="#categories">Categories</a><a href="#services">Customer Service</a><span>Track Order</span><span>New Arrivals</span><span>Best Sellers</span></div></div>
-    <div className="marketTrustStrip"><div className="marketTrustStripInner"><span><b>Secure shopping</b> with trusted payment providers</span><span><b>Tracked international delivery</b></span><span><b>30-day return target</b></span><span><b>Support before and after purchase</b></span></div></div>
-   </header>
-   <div className="marketShell">
-    <section className="marketHero"><div className="marketHeroMain"><div className="marketHeroCopy"><div className="marketHeroKicker">GLOBAL MARKETPLACE · CURATED CATALOG</div><h1>Discover useful products from around the world.</h1><p>Clear pricing, supplier-linked fulfillment and destination-aware delivery in one professional shopping experience.</p><div className="marketCtas"><a className="marketBtnPrimary" href="#shop">Shop featured products <ArrowRight size={16}/></a><a className="marketBtnSecondary" href="#services">Why VantaCart</a></div></div></div><div className="heroSide"><div className="heroSideCard"><div><h3>Shop with confidence</h3><p>Products stay hidden until reviewed and manually approved for sale.</p></div><a href="#services">See how we protect shoppers →</a></div><div className="heroSideCard"><div><h3>Global delivery</h3><p>Shipping options are calculated from connected supplier networks.</p></div><a href="#shop">Explore the catalog →</a></div></div></section>
+ return <main className="storefront cleanMarket">
+  <header className="cleanHeader">
+   <div className="utilityBar"><div className="utilityInner">
+    <div><MapPin size={17}/><span>Deliver to<br/><b>Worldwide</b></span></div>
+    <div><ShieldCheck size={17}/><span><b>Secure payments</b><br/>SSL encrypted</span></div>
+    <div><Truck size={17}/><span><b>Tracked delivery</b><br/>Real-time updates</span></div>
+    <div><RotateCcw size={17}/><span><b>30-day returns</b><br/>Easy & hassle-free</span></div>
+    <div><Headphones size={17}/><span><b>Customer support</b><br/>We’re here to help</span></div>
+    <div className="utilityRight"><span>🇺🇸 English / USD</span><span>Help & Support</span></div>
+   </div></div>
+   <div className="mainHeader"><div className="mainHeaderInner">
+    <Link href="/" className="cleanLogo"><span className="bagMark">⌑</span>Vanta<span>Cart</span></Link>
+    <form className="cleanSearch" action="/#shop"><select aria-label="Category"><option>All categories</option><option>Electronics</option><option>Home & Living</option><option>Beauty & Health</option><option>Fashion</option></select><input placeholder="Search products..." aria-label="Search products"/><button type="submit" aria-label="Search"><Search size={21}/></button></form>
+    <div className="headerActions"><div><UserRound size={25}/><span><small>Hello, sign in</small><b>Account & Lists</b></span></div><div><Box size={25}/><span><small>Orders</small><b>Track & Manage</b></span></div><a href="#shop"><ShoppingCart size={27}/><span><small>Cart</small><b>$0.00</b></span></a></div>
+   </div></div>
+   <div className="cleanNav"><div className="cleanNavInner"><span><Menu size={18}/> All Categories</span><a href="#shop">Today’s Picks</a><span>New Arrivals</span><span>Best Sellers</span><span>Deals</span><span>Brands</span><span>Track Order</span><a href="#services">Customer Service</a></div></div>
+  </header>
 
-    <section className="categoryRail" id="categories"><a className="categoryTile" href="#shop"><span className="categoryIcon">🏠</span><div><b>Home & Living</b><span>Practical everyday finds</span></div></a><a className="categoryTile" href="#shop"><span className="categoryIcon">💇</span><div><b>Beauty & Hair</b><span>Popular care essentials</span></div></a><a className="categoryTile" href="#shop"><span className="categoryIcon">🎧</span><div><b>Electronics</b><span>Useful tech accessories</span></div></a><a className="categoryTile" href="#shop"><span className="categoryIcon">🐾</span><div><b>Pet Supplies</b><span>Smart pet solutions</span></div></a><a className="categoryTile" href="#shop"><span className="categoryIcon">🚗</span><div><b>Auto</b><span>Car accessories & tools</span></div></a><a className="categoryTile" href="#shop"><span className="categoryIcon">🎁</span><div><b>Trending</b><span>Products gaining attention</span></div></a></section>
+  <div className="cleanShell">
+   <section className="cleanHero"><div className="heroMainClean"><div className="heroTextClean"><div className="cleanKicker">GLOBAL MARKETPLACE</div><h1>Shop smarter.<br/>Delivered <span>worldwide.</span></h1><p>Quality products from trusted suppliers.<br/>Clear pricing. Tracked delivery. Better shopping.</p><div className="heroButtons"><a href="#shop" className="greenButton">Shop all products <ArrowRight size={17}/></a><a href="#services" className="outlineButton">How it works</a></div><div className="ratingTrust"><div className="avatarStack"><i>JD</i><i>AM</i><i>LC</i></div><div><span>Trusted shopping experience</span><b>★★★★★ <em>Catalog reviewed before publishing</em></b></div></div></div><div className="heroVisualClean"><div className="globeVisual"><Globe2 size={150}/></div><Plane className="planeVisual" size={92}/><div className="parcelVisual"><Box size={70}/><b>VantaCart</b></div><div className="shieldVisual"><ShieldCheck size={62}/></div></div></div>
+    <div className="heroCardsClean"><div><span className="roundIcon"><ShieldCheck/></span><div><b>Secure Shopping</b><p>Your data and payments are protected.</p></div><ArrowRight/></div><div><span className="roundIcon"><Truck/></span><div><b>Global Delivery</b><p>International shipping with tracking.</p></div><ArrowRight/></div><div><span className="roundIcon"><RotateCcw/></span><div><b>Easy Returns</b><p>Clear 30-day return target.</p></div><ArrowRight/></div></div>
+   </section>
 
-    <section className="marketSection" id="shop"><div className="marketSectionHeader"><div><h2>Featured products</h2><p>Reviewed products currently available in the VantaCart catalog.</p></div><a href="#shop">See all products</a></div>
-      {error?<div className="panel"><h3>Catalog unavailable</h3><p className="meta">{error}</p></div>:products.length===0?<div className="panel"><h3>New products are being prepared</h3><p className="meta">Our catalog team is reviewing products for publication.</p></div>:<div className="marketProducts">{products.map((p,i)=><Link href={`/products/${p.cj_product_id}`} key={p.id} className="marketProduct"><div className="marketProductImage">{p.image_url?<img src={p.image_url} alt={p.name}/>:<span>📦</span>}{i===0&&<span className="marketBadge">Featured</span>}</div><div className="marketProductBody"><div className="marketProductTitle">{p.name}</div><div className="marketRating"><span>{[0,1,2,3,4].map(n=><Star key={n} size={13} fill="currentColor"/> )}</span><span>New catalog item</span></div><div className="marketPrice"><sup>$</sup>{Number(p.sale_price).toFixed(2)}</div><div className="marketShip">International shipping options shown before payment.</div><span className="marketPrime">✓ Tracked fulfillment available</span></div></Link>)}</div>}
-    </section>
+   <section className="benefitStrip" id="services"><div><Tag/><span><b>Clear pricing</b>No hidden product fees</span></div><div><PackageCheck/><span><b>Reviewed catalog</b>Products approved before sale</span></div><div><LockKeyhole/><span><b>Safe payments</b>Trusted payment providers</span></div><div><ShieldCheck/><span><b>Buyer protection</b>Shop with confidence</span></div><div><LifeBuoy/><span><b>Order support</b>Help when you need it</span></div></section>
 
-    <section className="serviceGrid" id="services"><div className="serviceCard"><div className="serviceIcon"><ShieldCheck size={20}/></div><b>Secure-first commerce</b><span>Payment information will be handled by established payment providers, not stored directly by VantaCart.</span></div><div className="serviceCard"><div className="serviceIcon"><Truck size={20}/></div><b>Global shipping</b><span>Destination-aware delivery options through integrated fulfillment partners.</span></div><div className="serviceCard"><div className="serviceIcon"><RotateCcw size={20}/></div><b>Clear returns</b><span>Return conditions are shown transparently before checkout and supported after delivery.</span></div><div className="serviceCard"><div className="serviceIcon"><Headphones size={20}/></div><b>Order support</b><span>Support structure for delivery, tracking, returns and order-related questions.</span></div></section>
+   <section className="categorySection"><div className="sectionTitleRow"><h2>Shop by category</h2><a href="#shop">View all categories <ArrowRight size={15}/></a></div><div className="roundCategories">{categories.map(([icon,name])=><a href="#shop" key={name}><span>{icon}</span><b>{name}</b></a>)}</div></section>
 
-    <section className="marketInfoBand"><div><h3>Products reviewed before publication</h3><p>Every item remains in draft until it is explicitly approved in the VantaCart admin catalog.</p></div><div><h3>Supplier-linked fulfillment</h3><p>Catalog products retain their supplier references for stock, shipping and future order automation.</p></div><div><h3>Transparent international shopping</h3><p>Product price, shipping method and applicable destination costs are designed to be shown before purchase.</p></div></section>
-   </div>
-   <footer><div className="marketFooterTop"><a href="#" style={{color:'#fff',textDecoration:'none'}}>Back to top</a></div><div className="marketFooter"><div className="marketFooterGrid"><div><div className="marketFooterBrand">Vanta<span>Cart</span></div><span>Professional global marketplace infrastructure for curated products and tracked fulfillment.</span></div><div><h4>Get to know us</h4><span>About VantaCart</span><span>How we select products</span><span>Global fulfillment</span></div><div><h4>Let us help you</h4><span>Track your order</span><span>Returns & refunds</span><span>Customer support</span><span>Shipping information</span></div><div><h4>Policies</h4><span>Privacy policy</span><span>Terms of service</span><span>Return policy</span><span>Shipping policy</span></div></div><div className="marketFooterBottom"><span>© 2026 VantaCart. All rights reserved.</span><span>English · USD · Global marketplace</span></div></div></footer>
+   <section className="recommendSection" id="shop"><div className="sectionTitleRow"><h2>Recommended for you</h2><a href="#shop">View all <ArrowRight size={15}/></a></div>
+    {error?<div className="panel"><h3>Catalog unavailable</h3><p className="meta">{error}</p></div>:products.length===0?<div className="panel"><h3>New products are being prepared</h3><p className="meta">Our catalog team is reviewing products for publication.</p></div>:<div className="cleanProducts">{products.map((p,i)=><Link href={`/products/${p.cj_product_id}`} key={p.id} className="cleanProduct"><div className="cleanProductImage">{p.image_url?<img src={p.image_url} alt={p.name}/>:<span>📦</span>}{i===0&&<span className="cleanBadge">Featured</span>}</div><div className="cleanProductBody"><div className="cleanProductTitle">{p.name}</div><div className="cleanPrice">${Number(p.sale_price).toFixed(2)}</div><div className="cleanStars"><span>★★★★★</span><small>New</small></div><div className="deliveryHint"><CheckCircle2 size={13}/> Tracked fulfillment available</div></div></Link>)}</div>}
+   </section>
+
+   <section className="paymentTrust"><div className="paymentMethods"><span>We accept</span><b>VISA</b><b>Mastercard</b><b>AMEX</b><b>PayPal</b><b>Apple Pay</b><b>G Pay</b></div><div><ShieldCheck size={22}/><span><b>Secure payments</b>Your information is protected</span></div></section>
+  </div>
+
+  <footer className="cleanFooter"><div className="cleanFooterInner"><div><div className="cleanLogo footerLogo">Vanta<span>Cart</span></div><p>Curated global products with transparent pricing, tracked fulfillment and customer-first support.</p></div><div><b>Customer care</b><span>Help center</span><span>Track order</span><span>Returns & refunds</span><span>Shipping information</span></div><div><b>About VantaCart</b><span>How we select products</span><span>Supplier network</span><span>Buyer protection</span></div><div><b>Policies</b><span>Privacy policy</span><span>Terms of service</span><span>Return policy</span></div></div><div className="footerCopyright">© 2026 VantaCart · English · USD · Global marketplace</div></footer>
  </main>;
 }
