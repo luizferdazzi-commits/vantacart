@@ -54,3 +54,17 @@ export async function listCatalog(){
   const rows=await sql`SELECT * FROM catalog_products ORDER BY created_at DESC`;
   return rows as CatalogProduct[];
 }
+
+export async function listActiveCatalog(){
+  await ensureCatalog();
+  const sql=sqlClient();
+  const rows=await sql`SELECT * FROM catalog_products WHERE status='ACTIVE' ORDER BY updated_at DESC`;
+  return rows as CatalogProduct[];
+}
+
+export async function updateCatalogProduct(id:number,input:{salePrice:number;status:'DRAFT'|'ACTIVE'|'ARCHIVED'}){
+  await ensureCatalog();
+  const sql=sqlClient();
+  const rows=await sql`UPDATE catalog_products SET sale_price=${input.salePrice},status=${input.status},updated_at=NOW() WHERE id=${id} RETURNING *`;
+  return rows[0] as CatalogProduct|undefined;
+}
