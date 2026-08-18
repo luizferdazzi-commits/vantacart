@@ -24,7 +24,7 @@ export default async function Home(){
    <div className="mainHeader"><div className="mainHeaderInner">
     <Link href="/" className="cleanLogo"><span className="bagMark">⌑</span>Vanta<span>Cart</span></Link>
     <form className="cleanSearch" action="/#shop"><select aria-label="Category"><option>All categories</option><option>Electronics</option><option>Home & Living</option><option>Beauty & Health</option><option>Fashion</option></select><input placeholder="Search products..." aria-label="Search products"/><button type="submit" aria-label="Search"><Search size={21}/></button></form>
-    <div className="headerActions"><div><UserRound size={25}/><span><small>Hello, sign in</small><b>Account & Lists</b></span></div><div><Box size={25}/><span><small>Orders</small><b>Track & Manage</b></span></div><a href="#shop"><ShoppingCart size={27}/><span><small>Cart</small><b>$0.00</b></span></a></div>
+    <div className="headerActions"><div><UserRound size={25}/><span><small>Hello, sign in</small><b>Account & Lists</b></span></div><div><Box size={25}/><span><small>Orders</small><b>Track & Manage</b></span></div><Link href="/cart"><ShoppingCart size={27}/><span><small>Cart</small><b>View cart</b></span></Link></div>
    </div></div>
    <div className="cleanNav"><div className="cleanNavInner"><span><Menu size={18}/> All Categories</span><a href="#shop">Today’s Picks</a><span>New Arrivals</span><span>Best Sellers</span><span>Deals</span><span>Brands</span><span>Track Order</span><a href="#services">Customer Service</a></div></div>
   </header>
