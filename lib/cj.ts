@@ -3,7 +3,7 @@ const CJ_BASE='https://developers.cjdropshipping.com/api2.0/v1';
 let cachedToken:string|undefined;
 let cachedUntil=0;
 
-async function getAccessToken(){
+async function getAccessToken():Promise<string>{
   const now=Date.now();
   if(cachedToken && now<cachedUntil) return cachedToken;
   const apiKey=process.env.CJ_API_KEY;
@@ -19,10 +19,11 @@ async function getAccessToken(){
   if(!res.ok || !json?.result || !json?.data?.accessToken){
     throw new Error(json?.message || 'Unable to obtain CJ access token');
   }
-  cachedToken=json.data.accessToken;
+  const accessToken=String(json.data.accessToken);
+  cachedToken=accessToken;
   const expiry=Date.parse(json.data.accessTokenExpiryDate || '');
   cachedUntil=Number.isFinite(expiry)?Math.max(now+60_000,expiry-5*60_000):now+60*60*1000;
-  return cachedToken;
+  return accessToken;
 }
 
 export type CjProduct={
