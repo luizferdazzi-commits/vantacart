@@ -17,7 +17,7 @@ export default async function FreightPage({searchParams}:{searchParams:Promise<{
     try{data=await quoteCjFreight(pid,country);}catch(e){error=e instanceof Error?e.message:'Freight calculation failed';}
   }
 
-  const productCost=data?priceNumber(data.variant?.variantSellPrice ?? data.details?.sellPrice):0;
+  const productCost=data?priceNumber(data.variant?.variantSellPrice):0;
   const cheapest=data?.options?.[0];
   const freight=cheapest?(cheapest.totalPostageFee??cheapest.logisticPrice):0;
   const landed=productCost+freight;
