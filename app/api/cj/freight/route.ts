@@ -1,0 +1,3 @@
+import {NextResponse} from 'next/server';
+import {quoteCjFreightByVariant} from '@/lib/cj';
+export async function POST(req:Request){try{const b=await req.json();const vid=String(b.vid||'');const quantity=Number(b.quantity||1);const countryCode=String(b.countryCode||'');const zip=String(b.zip||'');if(!vid||!countryCode)return NextResponse.json({error:'Variant and destination country are required'},{status:400});const quote=await quoteCjFreightByVariant(vid,quantity,countryCode,zip);return NextResponse.json({ok:true,...quote});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:'Unable to calculate freight'},{status:500});}}
