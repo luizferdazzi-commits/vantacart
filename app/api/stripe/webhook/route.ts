@@ -1,6 +1,6 @@
 import {createHmac,timingSafeEqual} from 'crypto';
 import {NextResponse} from 'next/server';
-import {markOrderPaidFromSession} from '../../../../../lib/orders';
+import {markOrderPaidFromSession} from '../../../../lib/orders';
 
 export const runtime='nodejs';
 
