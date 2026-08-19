@@ -6,7 +6,9 @@ type CheckoutItem={id:string;name:string;price:number;qty:number;vid?:string;var
 export async function POST(req:Request){
   let publicId='';
   try{
-    const secret=process.env.STRIPE_SECRET_KEY;
+    // During sandbox validation, prefer the explicit Stripe test key.
+    // Keep the existing key as a fallback so production migration can be handled separately.
+    const secret=process.env.STRIPE_TEST_SECRET_KEY||process.env.STRIPE_SECRET_KEY;
     if(!secret)return NextResponse.json({error:'Stripe is not configured.'},{status:500});
     const body=await req.json();
     const items:Array<CheckoutItem>=Array.isArray(body.items)?body.items:[];
