@@ -1,8 +1,10 @@
 import {NextResponse} from 'next/server';
+import {attachStripeSession,createPendingOrder,markOrderCheckoutFailed} from '../../../../lib/orders';
 
 type CheckoutItem={id:string;name:string;price:number;qty:number;vid?:string;variant?:string};
 
 export async function POST(req:Request){
+  let publicId='';
   try{
     const secret=process.env.STRIPE_SECRET_KEY;
     if(!secret)return NextResponse.json({error:'Stripe is not configured.'},{status:500});
@@ -15,12 +17,16 @@ export async function POST(req:Request){
     if(!items.length||items.some(i=>!i.vid||!Number.isFinite(i.price)||!Number.isInteger(i.qty)||i.qty<1))return NextResponse.json({error:'Invalid cart items.'},{status:400});
     if(!country||!Number.isFinite(shipping)||shipping<0)return NextResponse.json({error:'Calculate a valid shipping quote first.'},{status:400});
 
+    const order=await createPendingOrder({items,shipping,country,zip,shippingMethod});
+    publicId=order.public_id;
+
     const origin=new URL(req.url).origin;
     const p=new URLSearchParams();
     p.set('mode','payment');
     p.set('success_url',`${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`);
     p.set('cancel_url',`${origin}/cart`);
-    p.set('billing_address_collection','auto');
+    p.set('billing_address_collection','required');
+    p.set('client_reference_id',publicId);
     items.forEach((item,index)=>{
       p.set(`line_items[${index}][quantity]`,String(item.qty));
       p.set(`line_items[${index}][price_data][currency]`,'usd');
@@ -36,13 +42,18 @@ export async function POST(req:Request){
       p.set(`line_items[${i}][price_data][unit_amount]`,String(Math.round(shipping*100)));
       p.set(`line_items[${i}][price_data][product_data][name]`,shippingMethod?`Shipping — ${shippingMethod}`:'Shipping');
     }
+    p.set('metadata[order_id]',publicId);
     p.set('metadata[destination_country]',country);
     p.set('metadata[destination_postal_code]',zip);
     p.set('metadata[shipping_method]',shippingMethod);
 
     const stripe=await fetch('https://api.stripe.com/v1/checkout/sessions',{method:'POST',headers:{Authorization:`Bearer ${secret}`,'Content-Type':'application/x-www-form-urlencoded'},body:p.toString()});
     const data=await stripe.json();
-    if(!stripe.ok)return NextResponse.json({error:data?.error?.message||'Stripe checkout creation failed.'},{status:502});
-    return NextResponse.json({url:data.url,id:data.id});
-  }catch(e){return NextResponse.json({error:e instanceof Error?e.message:'Unable to create checkout.'},{status:500})}
+    if(!stripe.ok){await markOrderCheckoutFailed(publicId,data);return NextResponse.json({error:data?.error?.message||'Stripe checkout creation failed.'},{status:502});}
+    await attachStripeSession(publicId,data.id);
+    return NextResponse.json({url:data.url,id:data.id,orderId:publicId});
+  }catch(e){
+    if(publicId){try{await markOrderCheckoutFailed(publicId,{error:e instanceof Error?e.message:String(e)})}catch{}}
+    return NextResponse.json({error:e instanceof Error?e.message:'Unable to create checkout.'},{status:500})
+  }
 }
