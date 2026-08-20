@@ -13,7 +13,6 @@ function verifyStripeSignature(payload:string,header:string,secret:string){
 }
 
 async function fulfillPaidOrder(publicId:string,livemode:boolean){
-  // Sandbox orders may be sent only as CJ sandbox orders. Real CJ orders require an explicit production switch.
   if(livemode&&process.env.CJ_LIVE_FULFILLMENT_ENABLED!=='true'){
     console.log('CJ live fulfillment safely disabled',{orderId:publicId});
     return {status:'LIVE_DISABLED'};
@@ -35,7 +34,7 @@ async function fulfillPaidOrder(publicId:string,livemode:boolean){
         countryCode:String(address.country||order.destination_country||''),country:String(address.country||order.destination_country||''),
         province:String(address.state||''),city:String(address.city||''),address:String(address.line1||''),address2:String(address.line2||''),
         zip:String(address.postal_code||order.destination_postal_code||''),name:String(address.name||order.customer_name||''),
-        phone:String(address.phone||order.customer_phone||''),email:String(order.customer_email||'')
+        phone:String(address.phone||order.customer_phone||''),email:String(order.customer_email||''),taxId:String(order.tax_id||'')
       }
     });
     await markOrderCjSubmitted(publicId,result);
