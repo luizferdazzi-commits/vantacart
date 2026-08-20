@@ -6,7 +6,10 @@ type CheckoutItem={id:string;name:string;price:number;qty:number;vid?:string;var
 export async function POST(req:Request){
   let publicId='';
   try{
-    const secret=process.env.STRIPE_TEST_SECRET_KEY||process.env.STRIPE_SECRET_KEY;
+    const isProduction=process.env.VERCEL_ENV==='production';
+    const secret=isProduction
+      ? (process.env.STRIPE_LIVE_SECRET_KEY||process.env.STRIPE_SECRET_KEY)
+      : (process.env.STRIPE_TEST_SECRET_KEY||process.env.STRIPE_SECRET_KEY);
     if(!secret)return NextResponse.json({error:'Stripe is not configured.'},{status:500});
     const body=await req.json();
     const items:Array<CheckoutItem>=Array.isArray(body.items)?body.items:[];
