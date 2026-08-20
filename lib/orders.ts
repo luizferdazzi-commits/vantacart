@@ -115,3 +115,12 @@ export async function getOrderBySession(sessionId:string){
   const rows=await sql`SELECT public_id,payment_status,fulfillment_status,total_amount,currency,customer_email,created_at,paid_at FROM orders WHERE stripe_session_id=${sessionId} LIMIT 1`;
   return rows[0] as any|undefined;
 }
+
+export async function listOrders(limit=50){
+  await ensureOrders();
+  const sql=sqlClient();
+  const rows=await sql`SELECT o.id,o.public_id,o.payment_status,o.fulfillment_status,o.total_amount,o.currency,o.customer_email,o.customer_name,o.destination_country,o.destination_postal_code,o.shipping_method,o.created_at,o.paid_at,
+    COALESCE((SELECT json_agg(json_build_object('product_name',oi.product_name,'variant_name',oi.variant_name,'quantity',oi.quantity,'unit_price',oi.unit_price,'cj_product_id',oi.cj_product_id,'cj_variant_id',oi.cj_variant_id) ORDER BY oi.id) FROM order_items oi WHERE oi.order_id=o.id),'[]'::json) AS items
+    FROM orders o ORDER BY o.created_at DESC LIMIT ${limit}`;
+  return rows as any[];
+}
