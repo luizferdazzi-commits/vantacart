@@ -3,9 +3,15 @@ import {CheckCircle2,ShieldCheck,TriangleAlert} from 'lucide-react';
 import {getOrderBySession,markOrderPaidFromSession} from '../../../lib/orders';
 import ClearCart from './ClearCart';
 
+function stripeSecret(){
+  const isProduction=process.env.VERCEL_ENV==='production';
+  return isProduction
+    ? (process.env.STRIPE_LIVE_SECRET_KEY||process.env.STRIPE_SECRET_KEY)
+    : (process.env.STRIPE_TEST_SECRET_KEY||process.env.STRIPE_SECRET_KEY);
+}
+
 async function retrieveStripeSession(sessionId:string){
-  // Use the same Stripe account/key selection as the checkout route.
-  const secret=process.env.STRIPE_TEST_SECRET_KEY||process.env.STRIPE_SECRET_KEY;
+  const secret=stripeSecret();
   if(!secret) throw new Error('Stripe is not configured');
   const r=await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`,{
     headers:{Authorization:`Bearer ${secret}`},
@@ -29,7 +35,7 @@ export default async function CheckoutSuccess({searchParams}:{searchParams:Promi
         order=await markOrderPaidFromSession(session);
         if(!order) order=await getOrderBySession(sessionId);
         verified=true;
-        message='Your payment was confirmed securely. The order is now queued for fulfillment review.';
+        message='Your payment was confirmed securely. Your order is being prepared for fulfillment.';
       }else{
         order=await getOrderBySession(sessionId);
         message='Payment is still processing. Please keep your order reference.';
@@ -38,7 +44,7 @@ export default async function CheckoutSuccess({searchParams}:{searchParams:Promi
       order=await getOrderBySession(sessionId).catch(()=>null);
       if(order?.payment_status==='PAID'){
         verified=true;
-        message='Your payment was confirmed securely. The order is now queued for fulfillment review.';
+        message='Your payment was confirmed securely. Your order is being prepared for fulfillment.';
       }
     }
   }
