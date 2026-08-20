@@ -29,6 +29,15 @@ export async function POST(req:Request){
     p.set('shipping_address_collection[allowed_countries][0]',country);
     p.set('phone_number_collection[enabled]','true');
     p.set('client_reference_id',publicId);
+    if(country==='BR'){
+      p.set('custom_fields[0][key]','tax_id');
+      p.set('custom_fields[0][label][type]','custom');
+      p.set('custom_fields[0][label][custom]','CPF ou CNPJ');
+      p.set('custom_fields[0][type]','text');
+      p.set('custom_fields[0][text][minimum_length]','6');
+      p.set('custom_fields[0][text][maximum_length]','20');
+      p.set('custom_fields[0][optional]','false');
+    }
     items.forEach((item,index)=>{
       p.set(`line_items[${index}][quantity]`,String(item.qty));
       p.set(`line_items[${index}][price_data][currency]`,'usd');
