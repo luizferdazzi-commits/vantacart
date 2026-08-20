@@ -12,40 +12,7 @@ export async function getCjProductDetails(pid:string){const url=new URL(`${CJ_BA
 export async function getCjVariants(pid:string){const url=new URL(`${CJ_BASE}/product/variant/query`);url.searchParams.set('pid',pid);const json=await cjJson(url);const rows=Array.isArray(json?.data)?json.data:[];return rows.map((v:any)=>({vid:String(v.vid),pid:String(v.pid||pid),variantNameEn:v.variantNameEn||'',variantImage:v.variantImage||'',variantSku:v.variantSku||'',variantKey:v.variantKey||v.variantStandard||v.variantNameEn||'Default',variantProperty:v.variantProperty||'',variantSellPrice:Number(v.variantSellPrice||0),variantSugSellPrice:Number(v.variantSugSellPrice||0),variantWeight:Number(v.variantWeight||0)})) as CjVariant[];}
 export async function quoteCjFreightByVariant(vid:string,quantity:number,endCountryCode:string,zip?:string){const destination=endCountryCode.trim().toUpperCase();if(!/^[A-Z]{2}$/.test(destination))throw new Error('Destination country must be a 2-letter code');if(!vid)throw new Error('Variant is required');const qty=Math.max(1,Math.floor(quantity||1));const variantUrl=new URL(`${CJ_BASE}/product/variant/queryByVid`);variantUrl.searchParams.set('vid',vid);variantUrl.searchParams.set('features','enable_inventory');const variant=(await cjJson(variantUrl)).data;const inventories=Array.isArray(variant?.inventories)?variant.inventories:[];const origin=String(inventories.find((x:any)=>Number(x?.totalInventory||x?.totalInventoryNum||0)>0)?.countryCode||inventories[0]?.countryCode||'CN').toUpperCase();const body:any={startCountryCode:origin,endCountryCode:destination,products:[{quantity:qty,vid}]};if(zip?.trim())body.zip=zip.trim();const json=await cjJson(`${CJ_BASE}/logistic/freightCalculate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const options:CjFreightOption[]=Array.isArray(json?.data)?json.data.map((x:any)=>({logisticName:String(x?.logisticName||'CJ Logistics'),logisticAging:String(x?.logisticAging||''),logisticPrice:Number(x?.logisticPrice||0),taxesFee:x?.taxesFee==null?undefined:Number(x.taxesFee),clearanceOperationFee:x?.clearanceOperationFee==null?undefined:Number(x.clearanceOperationFee),totalPostageFee:x?.totalPostageFee==null?undefined:Number(x.totalPostageFee)})):[];options.sort((a,b)=>(a.totalPostageFee??a.logisticPrice)-(b.totalPostageFee??b.logisticPrice));return{origin,destination,variant,options};}
 export async function quoteCjFreight(pid:string,endCountryCode='US'){const variants=await getCjVariants(pid);if(!variants.length)throw new Error('No shippable CJ variant found for this product');return quoteCjFreightByVariant(variants[0].vid,1,endCountryCode);}
-
 async function getVariantOrigin(vid:string){const url=new URL(`${CJ_BASE}/product/variant/queryByVid`);url.searchParams.set('vid',vid);url.searchParams.set('features','enable_inventory');const variant=(await cjJson(url)).data;const inventories=Array.isArray(variant?.inventories)?variant.inventories:[];return String(inventories.find((x:any)=>Number(x?.totalInventory||x?.totalInventoryNum||0)>0)?.countryCode||inventories[0]?.countryCode||'CN').toUpperCase();}
-
-export async function createCjOrderV2(input:{orderNumber:string;items:CjOrderItem[];shipping:CjShippingAddress;logisticName:string;sandbox:boolean}){
-  if(!input.items.length)throw new Error('CJ order has no items');
-  if(!input.logisticName)throw new Error('CJ logistics method is required');
-  const countryCode=input.shipping.countryCode.trim().toUpperCase();
-  if(!/^[A-Z]{2}$/.test(countryCode))throw new Error('CJ destination country is invalid');
-  if(!input.shipping.province||!input.shipping.city||!input.shipping.address||!input.shipping.name)throw new Error('Complete shipping address is required for CJ fulfillment');
-  if(countryCode==='BR'&&!/^\d{6,11}$/.test(String(input.shipping.taxId||'').replace(/\D/g,'')))throw new Error('A valid CPF/CNPJ is required for Brazil fulfillment');
-  const origins=await Promise.all(input.items.map(i=>getVariantOrigin(i.variantId)));
-  const origin=origins[0]||'CN';
-  if(origins.some(x=>x!==origin))throw new Error('Order contains products from different CJ origins and must be split before fulfillment');
-  const body={
-    orderNumber:input.orderNumber,
-    shippingZip:input.shipping.zip||'',
-    shippingCountry:input.shipping.country||countryCode,
-    shippingCountryCode:countryCode,
-    shippingProvince:input.shipping.province,
-    shippingCity:input.shipping.city,
-    shippingPhone:input.shipping.phone||'',
-    shippingCustomerName:input.shipping.name,
-    shippingAddress:input.shipping.address,
-    shippingAddress2:input.shipping.address2||'',
-    email:input.shipping.email||'',
-    taxId:String(input.shipping.taxId||'').replace(/\D/g,''),
-    payType:3,
-    isSandbox:input.sandbox?1:0,
-    logisticName:input.logisticName,
-    fromCountryCode:origin,
-    platform:'api',
-    orderFlow:1,
-    products:input.items.map((item,index)=>({vid:item.variantId,quantity:Math.max(1,Math.floor(item.quantity)),storeLineItemId:item.lineItemId||`${input.orderNumber}-${index+1}`}))
-  };
-  const json=await cjJson(`${CJ_BASE}/shopping/order/createOrderV2`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  return {origin,data:json.data,requestId:json.requestId||null};
-}
+export async function createCjOrderV2(input:{orderNumber:string;items:CjOrderItem[];shipping:CjShippingAddress;logisticName:string;sandbox:boolean}){if(!input.items.length)throw new Error('CJ order has no items');if(!input.logisticName)throw new Error('CJ logistics method is required');const countryCode=input.shipping.countryCode.trim().toUpperCase();if(!/^[A-Z]{2}$/.test(countryCode))throw new Error('CJ destination country is invalid');if(!input.shipping.province||!input.shipping.city||!input.shipping.address||!input.shipping.name)throw new Error('Complete shipping address is required for CJ fulfillment');if(countryCode==='BR'&&!/^\d{6,11}$/.test(String(input.shipping.taxId||'').replace(/\D/g,'')))throw new Error('A valid CPF/CNPJ is required for Brazil fulfillment');const origins=await Promise.all(input.items.map(i=>getVariantOrigin(i.variantId)));const origin=origins[0]||'CN';if(origins.some(x=>x!==origin))throw new Error('Order contains products from different CJ origins and must be split before fulfillment');const body={orderNumber:input.orderNumber,shippingZip:input.shipping.zip||'',shippingCountry:input.shipping.country||countryCode,shippingCountryCode:countryCode,shippingProvince:input.shipping.province,shippingCity:input.shipping.city,shippingPhone:input.shipping.phone||'',shippingCustomerName:input.shipping.name,shippingAddress:input.shipping.address,shippingAddress2:input.shipping.address2||'',email:input.shipping.email||'',taxId:String(input.shipping.taxId||'').replace(/\D/g,''),payType:3,isSandbox:input.sandbox?1:0,logisticName:input.logisticName,fromCountryCode:origin,platform:'api',orderFlow:1,products:input.items.map((item,index)=>({vid:item.variantId,quantity:Math.max(1,Math.floor(item.quantity)),storeLineItemId:item.lineItemId||`${input.orderNumber}-${index+1}`}))};const json=await cjJson(`${CJ_BASE}/shopping/order/createOrderV2`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return {origin,data:json.data,requestId:json.requestId||null};}
+export async function getCjOrderDetail(orderId:string){const url=new URL(`${CJ_BASE}/shopping/order/getOrderDetail`);url.searchParams.set('orderId',orderId);url.searchParams.append('features','LOGISTICS_TIMELINESS');const json=await cjJson(url);return json.data;}
+export async function getCjTracking(trackNumber:string){if(!trackNumber)return null;try{const json=await cjJson(`${CJ_BASE}/logistic/trackInfo`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackNumber})});return json.data;}catch{return null;}}
