@@ -21,9 +21,10 @@ async function runSync(){
 }
 
 export async function GET(req:Request){
-  const auth=req.headers.get('authorization');
   const secret=process.env.CRON_SECRET;
-  if(secret&&auth!==`Bearer ${secret}`)return NextResponse.json({error:'Unauthorized'},{status:401});
+  if(!secret)return NextResponse.json({error:'Cron is not configured.'},{status:503});
+  const auth=req.headers.get('authorization');
+  if(auth!==`Bearer ${secret}`)return NextResponse.json({error:'Unauthorized'},{status:401});
   const results=await runSync();
   return NextResponse.json({ok:true,synced:results.length,results});
 }
