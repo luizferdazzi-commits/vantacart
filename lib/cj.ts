@@ -6,7 +6,7 @@ export type CjProduct={id:string;nameEn:string;sku?:string;spu?:string;bigImage?
 export type CjVariant={vid:string;pid:string;variantNameEn?:string;variantImage?:string;variantSku?:string;variantKey?:string;variantProperty?:string;variantSellPrice?:number;variantSugSellPrice?:number;variantWeight?:number};
 export type CjFreightOption={logisticName:string;logisticAging:string;logisticPrice:number;taxesFee?:number;clearanceOperationFee?:number;totalPostageFee?:number};
 export type CjOrderItem={productId:string;variantId:string;quantity:number;lineItemId?:string};
-export type CjShippingAddress={countryCode:string;country?:string;province:string;city:string;address:string;address2?:string;zip?:string;name:string;phone?:string;email?:string};
+export type CjShippingAddress={countryCode:string;country?:string;province:string;city:string;address:string;address2?:string;zip?:string;name:string;phone?:string;email?:string;taxId?:string};
 export async function searchCjProducts(keyword='trending',size=20){const url=new URL(`${CJ_BASE}/product/listV2`);url.searchParams.set('page','1');url.searchParams.set('size',String(Math.min(Math.max(size,1),50)));if(keyword.trim())url.searchParams.set('keyWord',keyword.trim());url.searchParams.set('features','enable_category');url.searchParams.set('sort','desc');url.searchParams.set('orderBy','1');const json=await cjJson(url);const groups=Array.isArray(json?.data?.content)?json.data.content:[];const products:CjProduct[]=groups.flatMap((g:any)=>Array.isArray(g?.productList)?g.productList:[]);return{products,totalRecords:Number(json?.data?.totalRecords||products.length)};}
 export async function getCjProductDetails(pid:string){const url=new URL(`${CJ_BASE}/product/query`);url.searchParams.set('pid',pid);return(await cjJson(url)).data;}
 export async function getCjVariants(pid:string){const url=new URL(`${CJ_BASE}/product/variant/query`);url.searchParams.set('pid',pid);const json=await cjJson(url);const rows=Array.isArray(json?.data)?json.data:[];return rows.map((v:any)=>({vid:String(v.vid),pid:String(v.pid||pid),variantNameEn:v.variantNameEn||'',variantImage:v.variantImage||'',variantSku:v.variantSku||'',variantKey:v.variantKey||v.variantStandard||v.variantNameEn||'Default',variantProperty:v.variantProperty||'',variantSellPrice:Number(v.variantSellPrice||0),variantSugSellPrice:Number(v.variantSugSellPrice||0),variantWeight:Number(v.variantWeight||0)})) as CjVariant[];}
@@ -21,6 +21,7 @@ export async function createCjOrderV2(input:{orderNumber:string;items:CjOrderIte
   const countryCode=input.shipping.countryCode.trim().toUpperCase();
   if(!/^[A-Z]{2}$/.test(countryCode))throw new Error('CJ destination country is invalid');
   if(!input.shipping.province||!input.shipping.city||!input.shipping.address||!input.shipping.name)throw new Error('Complete shipping address is required for CJ fulfillment');
+  if(countryCode==='BR'&&!/^\d{6,11}$/.test(String(input.shipping.taxId||'').replace(/\D/g,'')))throw new Error('A valid CPF/CNPJ is required for Brazil fulfillment');
   const origins=await Promise.all(input.items.map(i=>getVariantOrigin(i.variantId)));
   const origin=origins[0]||'CN';
   if(origins.some(x=>x!==origin))throw new Error('Order contains products from different CJ origins and must be split before fulfillment');
@@ -36,6 +37,7 @@ export async function createCjOrderV2(input:{orderNumber:string;items:CjOrderIte
     shippingAddress:input.shipping.address,
     shippingAddress2:input.shipping.address2||'',
     email:input.shipping.email||'',
+    taxId:String(input.shipping.taxId||'').replace(/\D/g,''),
     payType:3,
     isSandbox:input.sandbox?1:0,
     logisticName:input.logisticName,
