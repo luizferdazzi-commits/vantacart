@@ -16,6 +16,7 @@ export async function ensureOrders(){
     customer_address JSONB, stripe_payload JSONB, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     paid_at TIMESTAMPTZ, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS tax_id TEXT`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cj_order_id TEXT`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cj_order_number TEXT`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cj_request_id TEXT`;
@@ -54,12 +55,15 @@ export async function markOrderPaidFromSession(session:any){
   const customer=session?.customer_details||{};const shipping=session?.collected_information?.shipping_details||session?.shipping_details||{};
   const address=shipping?.address||customer?.address||null;
   const addressPayload=address?{...address,name:shipping?.name||customer?.name||null,phone:shipping?.phone||customer?.phone||null}:null;
+  const customFields=Array.isArray(session?.custom_fields)?session.custom_fields:[];
+  const taxField=customFields.find((f:any)=>f?.key==='tax_id');
+  const taxId=String(taxField?.text?.value||taxField?.numeric?.value||'').replace(/\D/g,'');
   const rows=await sql`UPDATE orders SET stripe_session_id=COALESCE(${sessionId||null},stripe_session_id),
     stripe_payment_intent_id=${session?.payment_intent?String(session.payment_intent):null},
     payment_status=${session?.payment_status==='paid'?'PAID':'PENDING'},
     fulfillment_status=${session?.payment_status==='paid'?'READY_FOR_FULFILLMENT':'AWAITING_PAYMENT'},
     total_amount=${Number(session?.amount_total||0)/100}, customer_email=${customer?.email||null},
-    customer_name=${shipping?.name||customer?.name||null}, customer_phone=${shipping?.phone||customer?.phone||null},
+    customer_name=${shipping?.name||customer?.name||null}, customer_phone=${shipping?.phone||customer?.phone||null}, tax_id=${taxId||null},
     customer_address=${addressPayload?JSON.stringify(addressPayload):null}, stripe_payload=${JSON.stringify(session)},
     paid_at=${session?.payment_status==='paid'?new Date().toISOString():null}, updated_at=NOW()
     WHERE (${publicId}<>'' AND public_id=${publicId}) OR (${sessionId}<>'' AND stripe_session_id=${sessionId})
@@ -71,7 +75,7 @@ export async function claimOrderForFulfillment(publicId:string){
   await ensureOrders();const sql=sqlClient();
   const claimed=await sql`UPDATE orders SET fulfillment_status='FULFILLING',fulfillment_error=NULL,updated_at=NOW()
     WHERE public_id=${publicId} AND payment_status='PAID' AND fulfillment_status='READY_FOR_FULFILLMENT'
-    RETURNING id,public_id,destination_country,destination_postal_code,shipping_method,customer_email,customer_name,customer_phone,customer_address`;
+    RETURNING id,public_id,destination_country,destination_postal_code,shipping_method,customer_email,customer_name,customer_phone,customer_address,tax_id`;
   if(!claimed.length)return undefined;
   const order=claimed[0] as any;
   const items=await sql`SELECT id,cj_product_id,cj_variant_id,quantity FROM order_items WHERE order_id=${order.id} ORDER BY id`;
