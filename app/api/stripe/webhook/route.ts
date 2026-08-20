@@ -29,12 +29,14 @@ export async function POST(req:Request){
   if(!verifyStripeSignature(payload,signature,secret))return NextResponse.json({error:'Invalid Stripe signature.'},{status:400});
   let event:any;
   try{event=JSON.parse(payload)}catch{return NextResponse.json({error:'Invalid JSON.'},{status:400})}
+  console.log('Stripe webhook received',{id:event?.id,type:event?.type,livemode:event?.livemode,created:event?.created});
   try{
     if(event.type==='checkout.session.completed'||event.type==='checkout.session.async_payment_succeeded'){
       const session=event.data?.object;
+      console.log('Stripe checkout webhook',{sessionId:session?.id,paymentStatus:session?.payment_status,orderId:session?.metadata?.order_id||session?.client_reference_id||null});
       if(session?.payment_status==='paid')await markOrderPaidFromSession(session);
     }
-    return NextResponse.json({received:true});
+    return NextResponse.json({received:true,eventType:event?.type||null,eventId:event?.id||null});
   }catch(e){
     console.error('Stripe webhook processing failed',e);
     return NextResponse.json({error:e instanceof Error?e.message:'Webhook processing failed.'},{status:500});
