@@ -6,18 +6,16 @@ type CheckoutItem={id:string;name:string;price:number;qty:number;vid?:string;var
 export async function POST(req:Request){
   let publicId='';
   try{
-    // During sandbox validation, prefer the explicit Stripe test key.
-    // Keep the existing key as a fallback so production migration can be handled separately.
     const secret=process.env.STRIPE_TEST_SECRET_KEY||process.env.STRIPE_SECRET_KEY;
     if(!secret)return NextResponse.json({error:'Stripe is not configured.'},{status:500});
     const body=await req.json();
     const items:Array<CheckoutItem>=Array.isArray(body.items)?body.items:[];
     const shipping=Number(body.shipping||0);
-    const country=String(body.country||'');
+    const country=String(body.country||'').trim().toUpperCase();
     const zip=String(body.zip||'');
     const shippingMethod=String(body.shippingMethod||'');
     if(!items.length||items.some(i=>!i.vid||!Number.isFinite(i.price)||!Number.isInteger(i.qty)||i.qty<1))return NextResponse.json({error:'Invalid cart items.'},{status:400});
-    if(!country||!Number.isFinite(shipping)||shipping<0)return NextResponse.json({error:'Calculate a valid shipping quote first.'},{status:400});
+    if(!/^[A-Z]{2}$/.test(country)||!Number.isFinite(shipping)||shipping<0)return NextResponse.json({error:'Calculate a valid shipping quote first.'},{status:400});
 
     const order=await createPendingOrder({items,shipping,country,zip,shippingMethod});
     publicId=order.public_id;
@@ -28,6 +26,8 @@ export async function POST(req:Request){
     p.set('success_url',`${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`);
     p.set('cancel_url',`${origin}/cart`);
     p.set('billing_address_collection','required');
+    p.set('shipping_address_collection[allowed_countries][0]',country);
+    p.set('phone_number_collection[enabled]','true');
     p.set('client_reference_id',publicId);
     items.forEach((item,index)=>{
       p.set(`line_items[${index}][quantity]`,String(item.qty));
