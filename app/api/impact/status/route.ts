@@ -13,7 +13,7 @@ export async function GET() {
     );
   }
 
-  const endpoint = `https://api.impact.com/Mediapartners/${encodeURIComponent(accountSid)}.json`;
+  const endpoint = `https://api.impact.com/Mediapartners/${encodeURIComponent(accountSid)}/Campaigns.json?PageSize=1`;
   const authorization = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
 
   try {
@@ -51,7 +51,7 @@ export async function GET() {
       ok: true,
       connected: true,
       accountSidSuffix: accountSid.slice(-6),
-      impact: parsed,
+      sample: parsed,
     });
   } catch (error) {
     return NextResponse.json(
