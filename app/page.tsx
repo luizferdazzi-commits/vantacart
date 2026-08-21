@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import ImpactCampaignGrid from './components/ImpactCampaignGrid';
 import {Search,MapPin,Menu,ShieldCheck,ArrowRight,Globe2,Sparkles,Tag,CheckCircle2,Plane,HeartPulse,Laptop,House,Palette,Activity,TicketPercent,BriefcaseBusiness,Languages,BadgePercent,ExternalLink} from 'lucide-react';
 
 export const dynamic='force-dynamic';
@@ -30,8 +31,8 @@ const copy={
     globalReachSub:'Parceiros nacionais e internacionais',
     categories:'Explore por categoria',
     categoriesSub:'Um marketplace de recomendações para compras do dia a dia e serviços digitais.',
-    featured:'Ofertas selecionadas',
-    featuredSub:'Os primeiros feeds de parceiros estão sendo conectados. Em breve esta área será atualizada automaticamente com preços, disponibilidade e links rastreáveis.',
+    featured:'Campanhas ativas agora',
+    featuredSub:'As ofertas abaixo são sincronizadas automaticamente com programas afiliados ativos. Novos parceiros aprovados passam a aparecer sem cadastro manual.',
     network:'Rede de parceiros',
     networkSub:'A VantaCart está sendo preparada para integrar redes de afiliados do Brasil e do exterior, com atualização automática de catálogo.',
     disclosure:'Transparência: alguns links da VantaCart são links de afiliado. Podemos receber uma comissão quando uma compra é concluída, sem custo adicional para você.',
@@ -60,8 +61,8 @@ const copy={
     globalReachSub:'Domestic and international partners',
     categories:'Browse by category',
     categoriesSub:'A recommendation marketplace for everyday purchases and digital services.',
-    featured:'Curated deals',
-    featuredSub:'Our first partner feeds are being connected. Soon this section will update automatically with prices, availability and trackable links.',
+    featured:'Live campaigns now',
+    featuredSub:'The offers below are synchronized automatically with active affiliate programs. Newly approved partners can appear without manual product entry.',
     network:'Partner network',
     networkSub:'VantaCart is being prepared to connect affiliate networks from Brazil and abroad with automated catalog updates.',
     disclosure:'Transparency: some VantaCart links are affiliate links. We may earn a commission when a purchase is completed, at no extra cost to you.',
@@ -83,8 +84,8 @@ const categoryData={
 
 const partnerCards=[
   {name:'Brasil',items:'Amazon • Lomadee • varejistas nacionais',status:'EM INTEGRAÇÃO'},
-  {name:'Global',items:'Awin • impact.com • CJ Affiliate • Rakuten',status:'EM INTEGRAÇÃO'},
-  {name:'Software & IA',items:'SaaS • produtividade • automação • recorrência',status:'PRÓXIMA FASE'}
+  {name:'Global',items:'impact.com ativo • Awin • CJ Affiliate • Rakuten',status:'IMPACT ATIVO'},
+  {name:'Software & IA',items:'SaaS • produtividade • automação • recorrência',status:'CAMPANHAS NO AR'}
 ];
 
 export default async function Home({searchParams}:{searchParams:Promise<SearchParams>}){
@@ -135,9 +136,7 @@ export default async function Home({searchParams}:{searchParams:Promise<SearchPa
 
       <section className="categorySection"><div className="sectionTitleRow"><div><h2>{t.categories}</h2><p className="meta">{t.categoriesSub}</p></div><a href="#deals">{t.view} <ArrowRight size={15}/></a></div><div className="roundCategories">{cats.map(([icon,name])=><a href="#deals" key={String(name)}><span>{String(icon)}</span><b>{String(name)}</b></a>)}</div></section>
 
-      <section className="recommendSection" id="deals"><div className="sectionTitleRow"><div><h2>{t.featured}</h2><p className="meta">{t.featuredSub}</p></div></div><div className="cleanProducts">
-        {cats.slice(0,4).map(([icon,name],i)=><div key={String(name)} className="cleanProduct"><div className="cleanProductImage" style={{display:'grid',placeItems:'center',fontSize:70,background:'linear-gradient(145deg,#f8fafc,#eef6f2)'}}><span>{String(icon)}</span>{i===0&&<span className="cleanBadge">{lang==='pt'?'Novo':'New'}</span>}</div><div className="cleanProductBody"><div className="cleanProductTitle">{String(name)}</div><div className="cleanStars"><span>★★★★★</span><small>{lang==='pt'?'Seleção VantaCart':'VantaCart pick'}</small></div><div className="deliveryHint"><CheckCircle2 size={13}/> {lang==='pt'?'Parceiros em conexão':'Partner feeds connecting'}</div></div></div>)}
-      </div></section>
+      <section className="recommendSection" id="deals"><div className="sectionTitleRow"><div><h2>{t.featured}</h2><p className="meta">{t.featuredSub}</p></div></div><ImpactCampaignGrid lang={lang}/></section>
 
       <section id="brasil" style={{margin:'48px 0 18px',padding:'30px',borderRadius:24,background:'linear-gradient(135deg,#ecfdf5,#ffffff)',border:'1px solid #bbf7d0'}}><div className="sectionTitleRow"><div><h2>🇧🇷 {lang==='pt'?'Brasil primeiro, sem limitar o mundo':'Brazil first, without limiting the world'}</h2><p className="meta">{lang==='pt'?'Ofertas nacionais terão preços em reais e links de parceiros locais.':'Brazilian offers will use BRL pricing and local partner links.'}</p></div></div></section>
 
