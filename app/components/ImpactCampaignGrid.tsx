@@ -36,6 +36,13 @@ const iconMap = {
   sparkles: Sparkles,
 };
 
+function landingUrl(campaign: Campaign, lang: Lang) {
+  const n = `${campaign.name} ${campaign.advertiser}`.toLowerCase();
+  if (n.includes('creao')) return `/offers/creao?lang=${lang}`;
+  if (n.includes('riibase')) return `/offers/riibase?lang=${lang}`;
+  return campaign.trackingLink || '#';
+}
+
 function expandCampaign(campaign: Campaign): Offer[] {
   const n = `${campaign.name} ${campaign.advertiser}`.toLowerCase();
 
@@ -125,12 +132,14 @@ export default function ImpactCampaignGrid({ lang }: { lang: Lang }) {
 
   return <>
     <div style={{display:'flex',alignItems:'center',gap:8,margin:'0 0 16px',fontSize:13,color:'#166534',fontWeight:800}}>
-      <CheckCircle2 size={17}/> {lang === 'pt' ? `${campaigns.length} parceiros ativos • ${offers.length} campanhas promocionais no ar` : `${campaigns.length} active partners • ${offers.length} promotional campaigns live`}
+      <CheckCircle2 size={17}/> {lang === 'pt' ? `${campaigns.length} parceiros ativos • ${offers.length} ofertas comerciais no ar` : `${campaigns.length} active partners • ${offers.length} commercial offers live`}
     </div>
     <div className="cleanProducts">
       {offers.map((offer) => {
         const Icon = iconMap[offer.icon];
-        return <a key={offer.key} className="cleanProduct" href={offer.campaign.trackingLink} target="_blank" rel="sponsored noopener noreferrer" style={{textDecoration:'none',color:'inherit'}}>
+        const href = landingUrl(offer.campaign, lang);
+        const internal = href.startsWith('/');
+        return <a key={offer.key} className="cleanProduct" href={href} target={internal ? undefined : '_blank'} rel={internal ? undefined : 'sponsored noopener noreferrer'} style={{textDecoration:'none',color:'inherit'}}>
           <div className="cleanProductImage" style={{display:'grid',placeItems:'center',background:'linear-gradient(145deg,#f8fafc,#eef6f2)',minHeight:190,position:'relative'}}>
             <Icon size={70}/>
             <span className="cleanBadge">{lang === 'pt' ? offer.badgePt : offer.badgeEn}</span>
@@ -140,7 +149,7 @@ export default function ImpactCampaignGrid({ lang }: { lang: Lang }) {
             <div className="cleanProductTitle">{lang === 'pt' ? offer.titlePt : offer.titleEn}</div>
             <p style={{fontSize:13,lineHeight:1.5,color:'#64748b',margin:'8px 0 12px'}}>{lang === 'pt' ? offer.textPt : offer.textEn}</p>
             <div className="deliveryHint"><CheckCircle2 size={13}/> {lang === 'pt' ? 'Programa afiliado ativo' : 'Active affiliate program'}</div>
-            <div style={{display:'flex',alignItems:'center',gap:7,marginTop:14,fontWeight:800,color:'#166534'}}>{lang === 'pt' ? 'Ver oferta' : 'View offer'} <ArrowRight size={15}/><ExternalLink size={13}/></div>
+            <div style={{display:'flex',alignItems:'center',gap:7,marginTop:14,fontWeight:800,color:'#166534'}}>{lang === 'pt' ? 'Ver detalhes e oferta' : 'View details and offer'} <ArrowRight size={15}/>{!internal && <ExternalLink size={13}/>}</div>
           </div>
         </a>;
       })}
