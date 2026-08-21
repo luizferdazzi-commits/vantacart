@@ -1,6 +1,6 @@
 import {NextResponse} from 'next/server';
-import {claimOrderForFulfillment,markOrderCjSubmitted,markOrderFulfillmentFailed} from '../../../../../lib/orders';
-import {createCjOrderV2} from '../../../../../lib/cj';
+import {claimOrderForFulfillment,markOrderCjSubmitted,markOrderFulfillmentFailed} from '../../../../lib/orders';
+import {createCjOrderV2} from '../../../../lib/cj';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
