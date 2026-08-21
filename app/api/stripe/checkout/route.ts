@@ -1,5 +1,6 @@
 import {NextResponse} from 'next/server';
 import {attachStripeSession,createPendingOrder,markOrderCheckoutFailed} from '../../../../lib/orders';
+import {getCjBalance} from '../../../../lib/cj';
 
 type CheckoutItem={id:string;name:string;price:number;qty:number;vid?:string;variant?:string};
 
@@ -29,11 +30,25 @@ export async function POST(req:Request){
     if(!items.length||items.some(i=>!i.vid||!Number.isFinite(i.price)||!Number.isInteger(i.qty)||i.qty<1))return NextResponse.json({error:'Invalid cart items.'},{status:400});
     if(!/^[A-Z]{2}$/.test(country)||!Number.isFinite(shipping)||shipping<0)return NextResponse.json({error:'Calculate a valid shipping quote first.'},{status:400});
 
+    // Never charge the customer when the supplier cannot be paid automatically.
+    // We conservatively reserve the full cart value in USD (retail + live CJ freight),
+    // which is greater than or equal to the expected supplier cost for normal catalog margins.
+    if(isProduction){
+      const supplierReserveUsd=items.reduce((sum,item)=>sum+(item.price*item.qty),0)+shipping;
+      const cjBalance=await getCjBalance();
+      if(cjBalance.amount+0.0001<supplierReserveUsd){
+        return NextResponse.json({
+          error:'Checkout is temporarily unavailable while supplier funds are being replenished.',
+          code:'CJ_BALANCE_INSUFFICIENT',
+          availableUsd:cjBalance.amount,
+          requiredReserveUsd:Number(supplierReserveUsd.toFixed(2))
+        },{status:503});
+      }
+    }
+
     // Catalog and supplier values are maintained in USD, but this Brazilian Stripe
     // account settles in BRL. Adaptive Pricing requires the integration currency
     // to be a settlement currency, so convert the checkout base amount to BRL.
-    // When Adaptive Pricing is enabled in Stripe, customers can then be presented
-    // with supported local currencies while the merchant settles in BRL.
     const usdToBrl=await getUsdToBrlRate();
 
     const order=await createPendingOrder({items,shipping,country,zip,shippingMethod});
