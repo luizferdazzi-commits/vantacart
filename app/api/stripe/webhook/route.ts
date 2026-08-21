@@ -13,10 +13,6 @@ function verifyStripeSignature(payload:string,header:string,secret:string){
 }
 
 async function fulfillPaidOrder(publicId:string,livemode:boolean){
-  if(livemode&&process.env.CJ_LIVE_FULFILLMENT_ENABLED!=='true'){
-    console.log('CJ live fulfillment safely disabled',{orderId:publicId});
-    return {status:'LIVE_DISABLED'};
-  }
   const order=await claimOrderForFulfillment(publicId);
   if(!order)return {status:'NOT_CLAIMED'};
   try{
