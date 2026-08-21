@@ -23,7 +23,7 @@ type Offer = {
   titleEn: string;
   textPt: string;
   textEn: string;
-  icon: 'bot' | 'workflow' | 'business' | 'sparkles';
+  icon: 'bot' | 'workflow' | 'business' | 'briefcase' | 'sparkles';
   badgePt: string;
   badgeEn: string;
 };
@@ -32,6 +32,7 @@ const iconMap = {
   bot: Bot,
   workflow: Workflow,
   business: BriefcaseBusiness,
+  briefcase: BriefcaseBusiness,
   sparkles: Sparkles,
 };
 
@@ -127,7 +128,7 @@ export default function ImpactCampaignGrid({ lang }: { lang: Lang }) {
       <CheckCircle2 size={17}/> {lang === 'pt' ? `${campaigns.length} parceiros ativos • ${offers.length} campanhas promocionais no ar` : `${campaigns.length} active partners • ${offers.length} promotional campaigns live`}
     </div>
     <div className="cleanProducts">
-      {offers.map((offer, index) => {
+      {offers.map((offer) => {
         const Icon = iconMap[offer.icon];
         return <a key={offer.key} className="cleanProduct" href={offer.campaign.trackingLink} target="_blank" rel="sponsored noopener noreferrer" style={{textDecoration:'none',color:'inherit'}}>
           <div className="cleanProductImage" style={{display:'grid',placeItems:'center',background:'linear-gradient(145deg,#f8fafc,#eef6f2)',minHeight:190,position:'relative'}}>
