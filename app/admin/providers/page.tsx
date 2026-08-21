@@ -1,0 +1,4 @@
+import Link from 'next/link';
+import {getProviderStatuses} from '../../../lib/providers';
+export const dynamic='force-dynamic';
+export default async function ProvidersPage(){const providers=await getProviderStatuses();return <main style={{maxWidth:1100,margin:'0 auto',padding:'40px 20px'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><div><h1>Supplier network</h1><p>Connection readiness for nutraceutical and global fulfillment partners.</p></div><Link href="/admin">Back to admin</Link></div><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16}}>{providers.map(p=><section key={p.id} style={{border:'1px solid #ddd',borderRadius:16,padding:20}}><h2>{p.name}</h2><p>{p.category}</p><p><b>Status:</b> {p.mode}</p><p><b>Catalog:</b> {p.automatedCatalog?'Automated':'Pending'} · <b>Orders:</b> {p.automatedOrders?'Automated':'Pending'}</p><p>{p.notes}</p></section>)}</div></main>}
