@@ -5,7 +5,13 @@ import Script from 'next/script';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
-declare global { interface Window { dataLayer: unknown[]; gtag?: (...args: any[]) => void; } }
+declare global {
+  interface Window {
+    dataLayer: unknown[];
+    gtag?: (...args: any[]) => void;
+    __vantaGaConfigured?: boolean;
+  }
+}
 
 function ensureGtagQueue() {
   if (typeof window === 'undefined') return;
@@ -17,10 +23,19 @@ function ensureGtagQueue() {
   }
 }
 
-export function trackEvent(name: string, params: Record<string, unknown> = {}) {
-  if (typeof window === 'undefined') return;
+function ensureGaConfigured() {
+  if (typeof window === 'undefined' || !GA_ID) return;
   ensureGtagQueue();
-  window.gtag?.('event', name, params);
+  if (window.__vantaGaConfigured) return;
+  window.gtag?.('js', new Date());
+  window.gtag?.('config', GA_ID, { send_page_view: true });
+  window.__vantaGaConfigured = true;
+}
+
+export function trackEvent(name: string, params: Record<string, unknown> = {}) {
+  if (typeof window === 'undefined' || !GA_ID) return;
+  ensureGaConfigured();
+  window.gtag?.('event', name, { ...params, send_to: GA_ID });
 }
 
 function inferPartner(pathname: string, href: string) {
@@ -33,9 +48,18 @@ function inferPartner(pathname: string, href: string) {
 export function Analytics() {
   useEffect(() => {
     if (!GA_ID) return;
-    ensureGtagQueue();
+    ensureGaConfigured();
 
     const current = new URL(window.location.href);
+
+    // Deterministic production probe. It only fires when explicitly requested.
+    if (current.searchParams.get('tracking_test') === '1') {
+      trackEvent('tracking_probe', {
+        source_path: current.pathname,
+        diagnostic: 'vantacart_ga4',
+      });
+    }
+
     if (current.pathname.startsWith('/offers/')) {
       trackEvent('view_offer_page', {
         partner: inferPartner(current.pathname, current.href),
@@ -70,7 +94,7 @@ export function Analytics() {
 
       if (isExternal && isOfferPage) {
         const partner = inferPartner(here.pathname, url.href);
-        const params = {
+        const common = {
           partner,
           source_path: here.pathname,
           destination_host: url.hostname,
@@ -79,8 +103,32 @@ export function Analytics() {
           link_text: (anchor.textContent || '').trim().slice(0, 100),
           transport_type: 'beacon',
         };
-        trackEvent('affiliate_click', params);
-        trackEvent('affiliate_outbound_click', params);
+
+        // For same-tab affiliate exits, briefly hold navigation so GA4 can flush the beacon.
+        const sameTab = !anchor.target || anchor.target === '_self';
+        if (sameTab && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+          event.preventDefault();
+          let navigated = false;
+          const go = () => {
+            if (navigated) return;
+            navigated = true;
+            window.location.href = url.href;
+          };
+
+          ensureGaConfigured();
+          window.gtag?.('event', 'affiliate_click', {
+            ...common,
+            send_to: GA_ID,
+            event_callback: go,
+            event_timeout: 700,
+          });
+          window.gtag?.('event', 'affiliate_outbound_click', { ...common, send_to: GA_ID });
+          window.setTimeout(go, 750);
+          return;
+        }
+
+        trackEvent('affiliate_click', common);
+        trackEvent('affiliate_outbound_click', common);
       }
     };
 
@@ -91,12 +139,10 @@ export function Analytics() {
   if (!GA_ID) return null;
 
   return <>
-    <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
-    <Script id="ga4" strategy="afterInteractive">{`
+    <Script id="ga4-bootstrap" strategy="afterInteractive">{`
       window.dataLayer = window.dataLayer || [];
       window.gtag = window.gtag || function(){dataLayer.push(arguments);};
-      gtag('js', new Date());
-      gtag('config', '${GA_ID}', { send_page_view: true });
     `}</Script>
+    <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
   </>;
 }
