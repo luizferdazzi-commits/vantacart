@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Bot, BriefcaseBusiness, CheckCircle2, ExternalLink, Sparkles, Workflow, Users, TrendingUp, MessageSquareText, WandSparkles, Film, Image as ImageIcon, Volume2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Sparkles, ExternalLink } from 'lucide-react';
 import { trackEvent } from './Analytics';
 
 type Lang='pt'|'en';
 type Campaign={id:string;name:string;advertiser:string;description?:string;url?:string;status?:string;trackingLink?:string;allowsDeeplinking?:string;type?:string};
-type Offer={key:string;campaign:Campaign;titlePt:string;titleEn:string;textPt:string;textEn:string;icon:'bot'|'workflow'|'business'|'briefcase'|'sparkles'|'users'|'growth'|'message'|'film'|'image'|'volume';badgePt:string;badgeEn:string;visual:'ai'|'automation'|'content'|'productivity'|'crm'|'sales'|'crm-ai'|'growth'|'partner'|'video'|'motion'|'audio'};
-const iconMap={bot:Bot,workflow:Workflow,business:BriefcaseBusiness,briefcase:BriefcaseBusiness,sparkles:Sparkles,users:Users,growth:TrendingUp,message:MessageSquareText,film:Film,image:ImageIcon,volume:Volume2};
+
+function slugify(value:string){
+  return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
 
 function landingUrl(c:Campaign,lang:Lang){
   const n=`${c.name} ${c.advertiser}`.toLowerCase();
@@ -15,53 +17,63 @@ function landingUrl(c:Campaign,lang:Lang){
   if(n.includes('riibase'))return `/offers/riibase?lang=${lang}`;
   if(n.includes('protoarc'))return `/offers/protoarc?lang=${lang}`;
   if(n.includes('pixverse'))return `/offers/pixverse?lang=${lang}`;
-  return c.trackingLink||'#';
+  return `/offers/${slugify(c.name)}?lang=${lang}`;
 }
 
-function expandCampaign(c:Campaign):Offer[]{
-  const n=`${c.name} ${c.advertiser}`.toLowerCase();
-  if(n.includes('creao'))return [
-    {key:`${c.id}-agents`,campaign:c,icon:'bot',visual:'ai',badgePt:'IA',badgeEn:'AI',titlePt:'Crie agentes de IA para trabalhar por você',titleEn:'Build AI agents that work for you',textPt:'Automatize tarefas, conecte ferramentas e transforme conversas em trabalho concluído.',textEn:'Automate tasks, connect tools and turn conversations into finished work.'},
-    {key:`${c.id}-automation`,campaign:c,icon:'workflow',visual:'automation',badgePt:'Automação',badgeEn:'Automation',titlePt:'Automatize fluxos sem complicação',titleEn:'Automate workflows without the complexity',textPt:'Integre Gmail, Slack, GitHub e dezenas de ferramentas em fluxos inteligentes.',textEn:'Connect Gmail, Slack, GitHub and dozens of tools into intelligent workflows.'},
-    {key:`${c.id}-content`,campaign:c,icon:'sparkles',visual:'content',badgePt:'Conteúdo',badgeEn:'Content',titlePt:'Produza documentos, imagens e conteúdo com IA',titleEn:'Create documents, images and content with AI',textPt:'Use um único ambiente para acelerar criação, pesquisa e execução.',textEn:'Use one workspace to speed up creation, research and execution.'},
-    {key:`${c.id}-productivity`,campaign:c,icon:'briefcase',visual:'productivity',badgePt:'Produtividade',badgeEn:'Productivity',titlePt:'Centralize sua produtividade com IA',titleEn:'Centralize your AI productivity',textPt:'Reúna automações, apps reutilizáveis e tarefas agendadas em uma única plataforma.',textEn:'Bring automations, reusable apps and scheduled tasks into one platform.'}
-  ];
-  if(n.includes('riibase'))return [
-    {key:`${c.id}-crm`,campaign:c,icon:'business',visual:'crm',badgePt:'CRM',badgeEn:'CRM',titlePt:'CRM completo para organizar vendas e clientes',titleEn:'All-in-one CRM for sales and customers',textPt:'Centralize contatos, oportunidades e processos comerciais em um só sistema.',textEn:'Centralize contacts, opportunities and sales processes in one system.'},
-    {key:`${c.id}-sales`,campaign:c,icon:'workflow',visual:'sales',badgePt:'Vendas',badgeEn:'Sales',titlePt:'Automatize seu processo comercial',titleEn:'Automate your sales process',textPt:'Estruture etapas, acompanhamento e rotinas para não perder oportunidades.',textEn:'Structure stages, follow-ups and routines so opportunities do not get lost.'},
-    {key:`${c.id}-ai`,campaign:c,icon:'bot',visual:'crm-ai',badgePt:'IA + CRM',badgeEn:'AI + CRM',titlePt:'Use IA dentro do seu CRM',titleEn:'Use AI inside your CRM',textPt:'Aproveite recursos inteligentes para ganhar velocidade no atendimento e na gestão.',textEn:'Use intelligent features to speed up customer service and management.'},
-    {key:`${c.id}-growth`,campaign:c,icon:'growth',visual:'growth',badgePt:'Negócios',badgeEn:'Business',titlePt:'Uma base única para crescer seu negócio',titleEn:'One platform to grow your business',textPt:'Organize relacionamento, vendas e operação com uma visão centralizada.',textEn:'Organize relationships, sales and operations with a centralized view.'}
-  ];
-  if(n.includes('protoarc'))return [
-    {key:`${c.id}-ergonomic`,campaign:c,icon:'business',visual:'productivity',badgePt:'Ergonomia',badgeEn:'Ergonomics',titlePt:'Deixe seu setup mais confortável para trabalhar por horas',titleEn:'Make your setup more comfortable for long work sessions',textPt:'Conheça acessórios ergonômicos para tornar sua rotina no computador mais confortável e funcional.',textEn:'Explore ergonomic accessories designed to make long computer sessions more comfortable and functional.'},
-    {key:`${c.id}-workspace`,campaign:c,icon:'briefcase',visual:'partner',badgePt:'Home office',badgeEn:'Home office',titlePt:'Monte um workspace mais organizado e profissional',titleEn:'Build a more organized and professional workspace',textPt:'Soluções para organizar sua mesa, ganhar espaço e melhorar a experiência de trabalho.',textEn:'Workspace solutions that help organize your desk, save space and improve your work experience.'},
-    {key:`${c.id}-productivity`,campaign:c,icon:'workflow',visual:'automation',badgePt:'Produtividade',badgeEn:'Productivity',titlePt:'Conforto e produtividade no mesmo espaço',titleEn:'Comfort and productivity in one workspace',textPt:'Um ambiente melhor equipado ajuda a manter foco e fluidez ao longo do dia.',textEn:'A better-equipped workspace can support focus and a smoother workday.'},
-    {key:`${c.id}-premium`,campaign:c,icon:'sparkles',visual:'growth',badgePt:'Workspace premium',badgeEn:'Premium workspace',titlePt:'Eleve o nível do seu home office',titleEn:'Upgrade your home office experience',textPt:'Produtos premium para quem valoriza ergonomia, acabamento e uma mesa mais funcional.',textEn:'Premium products for people who value ergonomics, design and a more functional desk.'}
-  ];
-  if(n.includes('pixverse'))return [
-    {key:`${c.id}-text-video`,campaign:c,icon:'film',visual:'video',badgePt:'Texto → vídeo',badgeEn:'Text → video',titlePt:'Transforme prompts em vídeos com IA',titleEn:'Turn prompts into AI-generated videos',textPt:'Descreva uma cena e transforme sua ideia em um clipe visual sem um fluxo pesado de produção.',textEn:'Describe a scene and turn your idea into a visual clip without a heavy production workflow.'},
-    {key:`${c.id}-image-video`,campaign:c,icon:'image',visual:'motion',badgePt:'Imagem → vídeo',badgeEn:'Image → video',titlePt:'Dê movimento às suas imagens',titleEn:'Bring your images to life',textPt:'Anime fotos, produtos, personagens e conceitos com movimento, câmera e atmosfera.',textEn:'Animate photos, products, characters and concepts with motion, camera movement and atmosphere.'},
-    {key:`${c.id}-creative`,campaign:c,icon:'sparkles',visual:'content',badgePt:'Criação IA',badgeEn:'AI creation',titlePt:'Explore templates e recursos criativos',titleEn:'Explore templates and creative tools',textPt:'Crie variações, transições e novos formatos para conteúdo, campanhas e redes sociais.',textEn:'Create variations, transitions and new formats for content, campaigns and social media.'},
-    {key:`${c.id}-audio`,campaign:c,icon:'volume',visual:'audio',badgePt:'Áudio + lip sync',badgeEn:'Audio + lip sync',titlePt:'Complete seus vídeos com áudio e voz',titleEn:'Complete your videos with audio and voice',textPt:'Use recursos de som e sincronização labial para deixar o resultado mais completo.',textEn:'Use sound and lip-sync tools to make your final video more complete.'}
-  ];
-  return [{key:`${c.id}-default`,campaign:c,icon:'sparkles',visual:'partner',badgePt:'Parceiro',badgeEn:'Partner',titlePt:c.name,titleEn:c.name,textPt:c.description||'Oferta ativa de parceiro VantaCart.',textEn:c.description||'Active VantaCart partner offer.'}];
-}
-
-function ProductVisual({offer,lang}:{offer:Offer;lang:Lang}){
-  const Icon=iconMap[offer.icon];
-  const cfg:any={
-    ai:{bg:'linear-gradient(135deg,#0b1220,#312e81)',accent:'#a78bfa',label:'AI AGENT'},automation:{bg:'linear-gradient(135deg,#082f49,#155e75)',accent:'#67e8f9',label:'SMART FLOW'},content:{bg:'linear-gradient(135deg,#4c1d95,#be185d)',accent:'#f9a8d4',label:'AI STUDIO'},productivity:{bg:'linear-gradient(135deg,#052e16,#166534)',accent:'#86efac',label:'WORKSPACE'},crm:{bg:'linear-gradient(135deg,#064e3b,#047857)',accent:'#6ee7b7',label:'SALES CRM'},sales:{bg:'linear-gradient(135deg,#7c2d12,#ea580c)',accent:'#fdba74',label:'PIPELINE'},'crm-ai':{bg:'linear-gradient(135deg,#172554,#1d4ed8)',accent:'#93c5fd',label:'AI + CRM'},growth:{bg:'linear-gradient(135deg,#3f3f46,#18181b)',accent:'#facc15',label:'GROWTH'},partner:{bg:'linear-gradient(135deg,#1e293b,#334155)',accent:'#e2e8f0',label:'VANTACART PICK'},video:{bg:'linear-gradient(135deg,#28104e,#7c3aed)',accent:'#c4b5fd',label:'AI VIDEO'},motion:{bg:'linear-gradient(135deg,#172554,#2563eb)',accent:'#93c5fd',label:'IMAGE TO VIDEO'},audio:{bg:'linear-gradient(135deg,#4a044e,#c026d3)',accent:'#f5d0fe',label:'AUDIO + LIP SYNC'}
-  };
-  const v=cfg[offer.visual];
-  return <div className="cleanProductImage" style={{minHeight:205,position:'relative',overflow:'hidden',background:v.bg,padding:18,color:'#fff'}}><span className="cleanBadge">{lang==='pt'?offer.badgePt:offer.badgeEn}</span><div style={{position:'relative',height:'100%',minHeight:169,display:'flex',flexDirection:'column',justifyContent:'space-between'}}><div style={{display:'flex',justifyContent:'flex-end'}}><div style={{width:66,height:66,borderRadius:18,display:'grid',placeItems:'center',background:'rgba(255,255,255,.13)',border:'1px solid rgba(255,255,255,.22)'}}><Icon size={37}/></div></div><div><div style={{fontSize:11,fontWeight:900,letterSpacing:2,color:v.accent,marginBottom:7}}>{v.label}</div><div style={{display:'flex',gap:6,alignItems:'end'}}><div style={{height:46,flex:1,borderRadius:10,background:'rgba(255,255,255,.11)',padding:8}}><div style={{height:5,width:'55%',borderRadius:5,background:v.accent}}/><div style={{height:5,width:'82%',borderRadius:5,background:'rgba(255,255,255,.28)',marginTop:7}}/><div style={{height:5,width:'68%',borderRadius:5,background:'rgba(255,255,255,.18)',marginTop:6}}/></div><WandSparkles size={25} style={{color:v.accent,marginBottom:8}}/></div></div></div></div>;
+function shortDescription(c:Campaign,lang:Lang){
+  if(c.description)return c.description;
+  return lang==='pt'?'Oferta ativa de parceiro aprovado na Impact.':'Active offer from an approved Impact partner.';
 }
 
 export default function ImpactCampaignGrid({lang}:{lang:Lang}){
   const[campaigns,setCampaigns]=useState<Campaign[]>([]);
   const[loading,setLoading]=useState(true);
-  useEffect(()=>{let cancelled=false;fetch('/api/impact/campaigns',{cache:'no-store'}).then(r=>r.json()).then(data=>{if(!cancelled&&data?.ok&&Array.isArray(data.campaigns))setCampaigns(data.campaigns.filter((c:Campaign)=>c.status==='Active'&&c.trackingLink))}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true}},[]);
-  const offers=useMemo(()=>campaigns.flatMap(expandCampaign),[campaigns]);
-  if(loading)return <div style={{padding:24}}>{lang==='pt'?'Carregando ofertas ativas...':'Loading active offers...'}</div>;
-  if(!offers.length)return <div style={{padding:24}}>{lang==='pt'?'Novas ofertas estão sendo sincronizadas.':'New offers are being synchronized.'}</div>;
-  return <><div style={{display:'flex',alignItems:'center',gap:8,margin:'0 0 16px',fontSize:13,color:'#166534',fontWeight:800}}><CheckCircle2 size={17}/>{lang==='pt'?`${campaigns.length} parceiros ativos • ${offers.length} ofertas comerciais no ar`:`${campaigns.length} active partners • ${offers.length} commercial offers live`}</div><div className="cleanProducts">{offers.map(offer=>{const href=landingUrl(offer.campaign,lang),internal=href.startsWith('/');return <a key={offer.key} className="cleanProduct" href={href} target={internal?undefined:'_blank'} rel={internal?undefined:'sponsored noopener noreferrer'} onClick={()=>trackEvent('select_content',{content_type:'affiliate_offer',content_id:offer.key,partner:offer.campaign.advertiser,offer_name:offer.campaign.name,language:lang,destination:internal?'landing_page':'partner_site'})} style={{textDecoration:'none',color:'inherit',overflow:'hidden'}}><ProductVisual offer={offer} lang={lang}/><div className="cleanProductBody"><div style={{fontSize:12,fontWeight:800,color:'#166534',marginBottom:6}}>{offer.campaign.advertiser}</div><div className="cleanProductTitle">{lang==='pt'?offer.titlePt:offer.titleEn}</div><p style={{fontSize:13,lineHeight:1.5,color:'#64748b',margin:'8px 0 12px'}}>{lang==='pt'?offer.textPt:offer.textEn}</p><div className="deliveryHint"><CheckCircle2 size={13}/>{lang==='pt'?'Programa afiliado ativo':'Active affiliate program'}</div><div style={{display:'flex',alignItems:'center',gap:7,marginTop:14,fontWeight:800,color:'#166534'}}>{lang==='pt'?'Ver detalhes e oferta':'View details and offer'} <ArrowRight size={15}/>{!internal&&<ExternalLink size={13}/>}</div></div></a>})}</div></>;
+
+  useEffect(()=>{
+    let cancelled=false;
+    fetch('/api/impact/campaigns',{cache:'no-store'})
+      .then(r=>r.json())
+      .then(data=>{
+        if(!cancelled&&data?.ok&&Array.isArray(data.campaigns)){
+          setCampaigns(data.campaigns.filter((c:Campaign)=>c.status==='Active'&&c.trackingLink));
+        }
+      })
+      .finally(()=>{if(!cancelled)setLoading(false)});
+    return()=>{cancelled=true};
+  },[]);
+
+  const active=useMemo(()=>[...campaigns].sort((a,b)=>a.name.localeCompare(b.name)),[campaigns]);
+
+  if(loading)return <div style={{padding:24}}>{lang==='pt'?'Sincronizando parceiros ativos...':'Syncing active partners...'}</div>;
+  if(!active.length)return <div style={{padding:24}}>{lang==='pt'?'Novas ofertas estão sendo sincronizadas.':'New offers are being synchronized.'}</div>;
+
+  return <>
+    <div style={{display:'flex',alignItems:'center',gap:8,margin:'0 0 16px',fontSize:13,color:'#166534',fontWeight:800}}>
+      <CheckCircle2 size={17}/>{lang==='pt'?`${active.length} parceiros Impact ativos e sincronizados`:`${active.length} active Impact partners synchronized`}
+    </div>
+    <div className="cleanProducts">
+      {active.map((campaign,index)=>{
+        const href=landingUrl(campaign,lang);
+        return <a key={campaign.id} className="cleanProduct" href={href}
+          onClick={()=>trackEvent('select_content',{content_type:'affiliate_offer',content_id:campaign.id,partner:campaign.advertiser,offer_name:campaign.name,language:lang,destination:'landing_page'})}
+          style={{textDecoration:'none',color:'inherit',overflow:'hidden'}}>
+          <div className="cleanProductImage" style={{minHeight:205,position:'relative',overflow:'hidden',background:`linear-gradient(135deg,hsl(${(index*47)%360} 35% 17%),hsl(${(index*47+28)%360} 55% 30%))`,padding:18,color:'#fff'}}>
+            <span className="cleanBadge">{campaign.type||'Partner'}</span>
+            <div style={{height:169,display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
+              <div style={{display:'flex',justifyContent:'flex-end'}}><div style={{width:68,height:68,borderRadius:18,display:'grid',placeItems:'center',background:'rgba(255,255,255,.14)',border:'1px solid rgba(255,255,255,.22)'}}><Sparkles size={36}/></div></div>
+              <div><div style={{fontSize:11,fontWeight:900,letterSpacing:1.8,opacity:.75}}>VANTACART • IMPACT</div><strong style={{display:'block',fontSize:25,lineHeight:1.05,marginTop:7}}>{campaign.name}</strong></div>
+            </div>
+          </div>
+          <div className="cleanProductBody">
+            <div style={{fontSize:12,fontWeight:800,color:'#166534',marginBottom:6}}>{campaign.advertiser}</div>
+            <div className="cleanProductTitle">{campaign.name}</div>
+            <p style={{fontSize:13,lineHeight:1.5,color:'#64748b',margin:'8px 0 12px',display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{shortDescription(campaign,lang)}</p>
+            <div className="deliveryHint"><CheckCircle2 size={13}/>{lang==='pt'?'Programa afiliado ativo':'Active affiliate program'}</div>
+            <div style={{display:'flex',alignItems:'center',gap:7,marginTop:14,fontWeight:800,color:'#166534'}}>{lang==='pt'?'Ver detalhes e oferta':'View details and offer'} <ArrowRight size={15}/></div>
+          </div>
+        </a>;
+      })}
+    </div>
+    <div style={{display:'flex',alignItems:'center',gap:6,marginTop:14,fontSize:11,color:'#64748b'}}><ExternalLink size={12}/>{lang==='pt'?'A compra ou contratação é finalizada no site oficial do parceiro.':'Purchase or signup is completed on the partner’s official website.'}</div>
+  </>;
 }
