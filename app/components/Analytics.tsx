@@ -59,18 +59,16 @@ export function Analytics() {
       });
     }
 
-    // Controlled diagnostic: explicitly requested URL only, never normal traffic.
+    // Controlled diagnostics: only explicit test URLs can fire these.
     if (current.searchParams.get('affiliate_tracking_test') === '1') {
-      trackEvent('affiliate_click', {
+      const diagnostic = {
         partner: 'diagnostic',
         source_path: current.pathname,
-        destination_host: 'diagnostic.local',
-        destination_url: 'https://diagnostic.local/affiliate-test',
-        language: current.searchParams.get('lang') || 'unknown',
-        link_text: 'diagnostic',
-        transport_type: 'beacon',
-        diagnostic: 'vantacart_affiliate_click',
-      });
+        diagnostic: 'vantacart_affiliate_conversion',
+      };
+      trackEvent('affiliate_conversion', diagnostic);
+      // Legacy event retained temporarily for comparison/compatibility.
+      trackEvent('affiliate_click', { ...diagnostic, diagnostic: 'vantacart_affiliate_click' });
     }
 
     if (current.pathname.startsWith('/offers/')) {
@@ -128,17 +126,21 @@ export function Analytics() {
           };
 
           ensureGaConfigured();
-          window.gtag?.('event', 'affiliate_click', {
+          // Canonical conversion signal. Navigation waits for this event callback.
+          window.gtag?.('event', 'affiliate_conversion', {
             ...common,
             send_to: GA_ID,
             event_callback: go,
             event_timeout: 700,
           });
+          // Legacy telemetry retained for backward compatibility/debugging.
+          window.gtag?.('event', 'affiliate_click', { ...common, send_to: GA_ID });
           window.gtag?.('event', 'affiliate_outbound_click', { ...common, send_to: GA_ID });
           window.setTimeout(go, 750);
           return;
         }
 
+        trackEvent('affiliate_conversion', common);
         trackEvent('affiliate_click', common);
         trackEvent('affiliate_outbound_click', common);
       }
