@@ -52,11 +52,24 @@ export function Analytics() {
 
     const current = new URL(window.location.href);
 
-    // Deterministic production probe. It only fires when explicitly requested.
     if (current.searchParams.get('tracking_test') === '1') {
       trackEvent('tracking_probe', {
         source_path: current.pathname,
         diagnostic: 'vantacart_ga4',
+      });
+    }
+
+    // Controlled diagnostic: explicitly requested URL only, never normal traffic.
+    if (current.searchParams.get('affiliate_tracking_test') === '1') {
+      trackEvent('affiliate_click', {
+        partner: 'diagnostic',
+        source_path: current.pathname,
+        destination_host: 'diagnostic.local',
+        destination_url: 'https://diagnostic.local/affiliate-test',
+        language: current.searchParams.get('lang') || 'unknown',
+        link_text: 'diagnostic',
+        transport_type: 'beacon',
+        diagnostic: 'vantacart_affiliate_click',
       });
     }
 
@@ -104,7 +117,6 @@ export function Analytics() {
           transport_type: 'beacon',
         };
 
-        // For same-tab affiliate exits, briefly hold navigation so GA4 can flush the beacon.
         const sameTab = !anchor.target || anchor.target === '_self';
         if (sameTab && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
           event.preventDefault();
