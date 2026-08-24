@@ -38,6 +38,29 @@ export function trackEvent(name: string, params: Record<string, unknown> = {}) {
   window.gtag?.('event', name, { ...params, send_to: GA_ID });
 }
 
+function recordAffiliateFirstParty(payload: {
+  partner: string;
+  sourcePath: string;
+  destinationHost: string;
+  diagnostic?: boolean;
+}) {
+  if (typeof window === 'undefined') return;
+  const body = JSON.stringify(payload);
+  try {
+    if (navigator.sendBeacon) {
+      const blob = new Blob([body], { type: 'application/json' });
+      if (navigator.sendBeacon('/api/analytics/affiliate', blob)) return;
+    }
+  } catch {}
+  fetch('/api/analytics/affiliate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+    keepalive: true,
+    cache: 'no-store',
+  }).catch(() => {});
+}
+
 function inferPartner(pathname: string, href: string) {
   const slug = pathname.startsWith('/offers/') ? pathname.split('/').filter(Boolean)[1] : '';
   if (slug) return slug;
@@ -66,8 +89,13 @@ export function Analytics() {
         source_path: current.pathname,
         diagnostic: 'vantacart_affiliate_conversion',
       };
+      recordAffiliateFirstParty({
+        partner: 'diagnostic',
+        sourcePath: current.pathname,
+        destinationHost: 'diagnostic.local',
+        diagnostic: true,
+      });
       trackEvent('affiliate_conversion', diagnostic);
-      // Legacy event retained temporarily for comparison/compatibility.
       trackEvent('affiliate_click', { ...diagnostic, diagnostic: 'vantacart_affiliate_click' });
     }
 
@@ -115,6 +143,13 @@ export function Analytics() {
           transport_type: 'beacon',
         };
 
+        // First-party confirmation is independent from GA4 and survives navigation.
+        recordAffiliateFirstParty({
+          partner,
+          sourcePath: here.pathname,
+          destinationHost: url.hostname,
+        });
+
         const sameTab = !anchor.target || anchor.target === '_self';
         if (sameTab && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
           event.preventDefault();
@@ -126,14 +161,12 @@ export function Analytics() {
           };
 
           ensureGaConfigured();
-          // Canonical conversion signal. Navigation waits for this event callback.
           window.gtag?.('event', 'affiliate_conversion', {
             ...common,
             send_to: GA_ID,
             event_callback: go,
             event_timeout: 700,
           });
-          // Legacy telemetry retained for backward compatibility/debugging.
           window.gtag?.('event', 'affiliate_click', { ...common, send_to: GA_ID });
           window.gtag?.('event', 'affiliate_outbound_click', { ...common, send_to: GA_ID });
           window.setTimeout(go, 750);
