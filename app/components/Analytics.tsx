@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Script from 'next/script';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+const AFFILIATE_CONVERSION_EVENT = 'affiliate_outbound_click';
 
 declare global {
   interface Window {
@@ -64,8 +65,11 @@ function recordAffiliateFirstParty(payload: {
 function inferPartner(pathname: string, href: string) {
   const slug = pathname.startsWith('/offers/') ? pathname.split('/').filter(Boolean)[1] : '';
   if (slug) return slug;
-  try { return new URL(href).hostname.replace(/^www\./, '').split('.')[0] || 'other'; }
-  catch { return 'other'; }
+  try {
+    return new URL(href).hostname.replace(/^www\./, '').split('.')[0] || 'other';
+  } catch {
+    return 'other';
+  }
 }
 
 export function Analytics() {
@@ -82,12 +86,14 @@ export function Analytics() {
       });
     }
 
-    // Controlled diagnostics: only explicit test URLs can fire these.
+    // Controlled diagnostic using the SAME canonical event used by real affiliate clicks.
     if (current.searchParams.get('affiliate_tracking_test') === '1') {
       const diagnostic = {
         partner: 'diagnostic',
         source_path: current.pathname,
-        diagnostic: 'vantacart_affiliate_conversion',
+        destination_host: 'diagnostic.local',
+        language: current.searchParams.get('lang') || 'unknown',
+        diagnostic: 'vantacart_affiliate_outbound_click',
       };
       recordAffiliateFirstParty({
         partner: 'diagnostic',
@@ -95,8 +101,7 @@ export function Analytics() {
         destinationHost: 'diagnostic.local',
         diagnostic: true,
       });
-      trackEvent('affiliate_conversion', diagnostic);
-      trackEvent('affiliate_click', { ...diagnostic, diagnostic: 'vantacart_affiliate_click' });
+      trackEvent(AFFILIATE_CONVERSION_EVENT, diagnostic);
     }
 
     if (current.pathname.startsWith('/offers/')) {
@@ -113,8 +118,11 @@ export function Analytics() {
       if (!anchor?.href) return;
 
       let url: URL;
-      try { url = new URL(anchor.href, window.location.href); }
-      catch { return; }
+      try {
+        url = new URL(anchor.href, window.location.href);
+      } catch {
+        return;
+      }
 
       const here = new URL(window.location.href);
       const isExternal = url.hostname !== here.hostname;
@@ -131,52 +139,52 @@ export function Analytics() {
         });
       }
 
-      if (isExternal && isOfferPage) {
-        const partner = inferPartner(here.pathname, url.href);
-        const common = {
-          partner,
-          source_path: here.pathname,
-          destination_host: url.hostname,
-          destination_url: url.href,
-          language: lang,
-          link_text: (anchor.textContent || '').trim().slice(0, 100),
-          transport_type: 'beacon',
+      if (!isExternal || !isOfferPage) return;
+
+      const partner = inferPartner(here.pathname, url.href);
+      const common = {
+        partner,
+        source_path: here.pathname,
+        destination_host: url.hostname,
+        destination_url: url.href,
+        language: lang,
+        link_text: (anchor.textContent || '').trim().slice(0, 100),
+        event_category: 'affiliate',
+      };
+
+      // Independent first-party confirmation survives navigation and gives us a server-side proof.
+      recordAffiliateFirstParty({
+        partner,
+        sourcePath: here.pathname,
+        destinationHost: url.hostname,
+      });
+
+      const sameTab = !anchor.target || anchor.target === '_self';
+      if (sameTab && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+        event.preventDefault();
+        let navigated = false;
+        const go = () => {
+          if (navigated) return;
+          navigated = true;
+          window.location.href = url.href;
         };
 
-        // First-party confirmation is independent from GA4 and survives navigation.
-        recordAffiliateFirstParty({
-          partner,
-          sourcePath: here.pathname,
-          destinationHost: url.hostname,
+        ensureGaConfigured();
+        window.gtag?.('event', AFFILIATE_CONVERSION_EVENT, {
+          ...common,
+          send_to: GA_ID,
+          transport_type: 'beacon',
+          event_callback: go,
+          event_timeout: 700,
         });
-
-        const sameTab = !anchor.target || anchor.target === '_self';
-        if (sameTab && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
-          event.preventDefault();
-          let navigated = false;
-          const go = () => {
-            if (navigated) return;
-            navigated = true;
-            window.location.href = url.href;
-          };
-
-          ensureGaConfigured();
-          window.gtag?.('event', 'affiliate_conversion', {
-            ...common,
-            send_to: GA_ID,
-            event_callback: go,
-            event_timeout: 700,
-          });
-          window.gtag?.('event', 'affiliate_click', { ...common, send_to: GA_ID });
-          window.gtag?.('event', 'affiliate_outbound_click', { ...common, send_to: GA_ID });
-          window.setTimeout(go, 750);
-          return;
-        }
-
-        trackEvent('affiliate_conversion', common);
-        trackEvent('affiliate_click', common);
-        trackEvent('affiliate_outbound_click', common);
+        window.setTimeout(go, 750);
+        return;
       }
+
+      trackEvent(AFFILIATE_CONVERSION_EVENT, {
+        ...common,
+        transport_type: 'beacon',
+      });
     };
 
     document.addEventListener('click', handleClick, true);
@@ -185,11 +193,13 @@ export function Analytics() {
 
   if (!GA_ID) return null;
 
-  return <>
-    <Script id="ga4-bootstrap" strategy="afterInteractive">{`
-      window.dataLayer = window.dataLayer || [];
-      window.gtag = window.gtag || function(){dataLayer.push(arguments);};
-    `}</Script>
-    <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
-  </>;
+  return (
+    <>
+      <Script id="ga4-bootstrap" strategy="afterInteractive">{`
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = window.gtag || function(){dataLayer.push(arguments);};
+      `}</Script>
+      <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+    </>
+  );
 }
