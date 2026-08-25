@@ -5,12 +5,24 @@ export const dynamic='force-dynamic';
 
 type Lang='pt'|'en';
 
+const confirmedTrackingLinks:[RegExp,string][]=[
+  [/gearup for mobile/i,'https://gearupapp.pxf.io/WOPvnP'],
+  [/\bgearup\b/i,'https://gearup.sjv.io/qWGL75'],
+  [/movavi/i,'https://movaviaffiliateprogram.sjv.io/E0YgmP'],
+];
+
 function authHeader(accountSid:string,authToken:string){
   return `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`;
 }
 
 function slugify(value:string){
   return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+
+function withConfirmedTrackingLink(campaign:GenericImpactCampaign):GenericImpactCampaign{
+  const name=`${campaign.name} ${campaign.advertiser}`;
+  const override=confirmedTrackingLinks.find(([pattern])=>pattern.test(name));
+  return override?{...campaign,trackingLink:override[1]}:campaign;
 }
 
 async function getCampaigns():Promise<GenericImpactCampaign[]>{
@@ -22,7 +34,7 @@ async function getCampaigns():Promise<GenericImpactCampaign[]>{
   if(!response.ok)return [];
   const data=await response.json();
   const campaigns=Array.isArray(data?.Campaigns)?data.Campaigns:[];
-  return campaigns.map((campaign:any)=>({
+  return campaigns.map((campaign:any)=>withConfirmedTrackingLink({
     id:campaign.CampaignId,
     name:campaign.CampaignName,
     advertiser:campaign.AdvertiserName,
