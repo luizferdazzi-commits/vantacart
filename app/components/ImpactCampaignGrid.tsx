@@ -9,11 +9,11 @@ type Campaign={id:string;name:string;advertiser:string;description?:string;url?:
 type Category='all'|'ai'|'business'|'home'|'creators'|'productivity'|'technology';
 
 const CACHE_KEY='vantacart_active_impact_campaigns_v1';
-const editorialRank=['pixverse','creao','protoarc','riibase','vidu','gamsgo','appy pie','lorka','wizstar'];
+const editorialRank=['pixverse','creao','riibase','vidu','gamsgo','appy pie','lorka','wizstar'];
 
 function slugify(value:string){return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
 function landingUrl(c:Campaign,lang:Lang){const n=`${c.name} ${c.advertiser}`.toLowerCase();if(n.includes('creao'))return `/offers/creao?lang=${lang}`;if(n.includes('riibase'))return `/offers/riibase?lang=${lang}`;if(n.includes('protoarc'))return `/offers/protoarc?lang=${lang}`;if(n.includes('pixverse'))return `/offers/pixverse?lang=${lang}`;return `/offers/${slugify(c.name)}?lang=${lang}`;}
-function shortDescription(c:Campaign,lang:Lang){if(c.description)return c.description;return lang==='pt'?'Oferta ativa de parceiro aprovado na Impact.':'Active offer from an approved Impact partner.';}
+function shortDescription(c:Campaign,lang:Lang){if(c.description)return c.description;return lang==='pt'?'Oferta ativa de parceiro aprovado na Impact.':'Active offer from an approved Impact partner.';}\nfunction isDigitalCampaign(c:Campaign){const s=\`${c.name} ${c.advertiser} ${c.description||''}\`.toLowerCase();return !/protoarc|keyboard|mouse|ergonomic|workspace|desk|home office/.test(s);}
 function categoryOf(c:Campaign):Category{
   const s=`${c.name} ${c.advertiser} ${c.description||''}`.toLowerCase();
   if(/protoarc|keyboard|mouse|ergonomic|workspace|desk|home office/.test(s))return 'home';
@@ -60,10 +60,10 @@ export default function ImpactCampaignGrid({lang,initialQuery='',initialCategory
   useEffect(()=>{
     let cancelled=false;
     try{const cached=localStorage.getItem(CACHE_KEY);if(cached){const parsed=JSON.parse(cached);if(Array.isArray(parsed)&&parsed.length)setCampaigns(parsed);}}catch{}
-    fetch('/api/impact/campaigns',{cache:'no-store'}).then(r=>r.json()).then(data=>{if(!cancelled&&data?.ok&&Array.isArray(data.campaigns)){const active=data.campaigns.filter((c:Campaign)=>c.status==='Active'&&c.trackingLink);setCampaigns(active);try{localStorage.setItem(CACHE_KEY,JSON.stringify(active));}catch{}}}).catch(()=>{}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true};
+    fetch('/api/impact/campaigns',{cache:'no-store'}).then(r=>r.json()).then(data=>{if(!cancelled&&data?.ok&&Array.isArray(data.campaigns)){const active=data.campaigns.filter((c:Campaign)=>c.status==='Active'&&c.trackingLink&&isDigitalCampaign(c));setCampaigns(active);try{localStorage.setItem(CACHE_KEY,JSON.stringify(active));}catch{}}}).catch(()=>{}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true};
   },[]);
 
-  const ranked=useMemo(()=>[...campaigns].sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name)),[campaigns]);
+  const ranked=useMemo(()=>[...campaigns].filter(isDigitalCampaign).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name)),[campaigns]);
   const filtered=useMemo(()=>{const q=query.trim().toLowerCase();return ranked.filter(c=>{const cat=categoryOf(c);const matchesCat=category==='all'||cat===category;const hay=`${c.name} ${c.advertiser} ${c.description||''}`.toLowerCase();return matchesCat&&(!q||hay.includes(q));});},[ranked,query,category]);
   const setFilter=(cat:Category)=>{setCategory(cat);trackEvent('filter_offers',{category:cat,language:lang});};
 
