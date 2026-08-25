@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 const MARKETPLACE_PAGE_SIZE = 100;
+const MAX_CATEGORY_LENGTH = 180;
 
 function authHeader(accountSid: string, authToken: string) {
   return `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
@@ -14,16 +15,18 @@ function listOf(data: any) {
   return [];
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const accountSid = process.env.IMPACT_ACCOUNT_SID;
   const authToken = process.env.IMPACT_AUTH_TOKEN;
+  const category = request.nextUrl.searchParams.get("category")?.trim().slice(0, MAX_CATEGORY_LENGTH);
 
   if (!accountSid || !authToken) {
     return NextResponse.json({ ok: false, error: "Impact credentials are not configured" }, { status: 500 });
   }
 
-  // Marketplace uses the v16 path exactly as documented (without the legacy .json suffix).
-  const endpoint = `https://api.impact.com/Mediapartners/${encodeURIComponent(accountSid)}/Marketplace/Products?PageSize=${MARKETPLACE_PAGE_SIZE}`;
+  const params = new URLSearchParams({ PageSize: String(MARKETPLACE_PAGE_SIZE) });
+  if (category) params.set("Category", category);
+  const endpoint = `https://api.impact.com/Mediapartners/${encodeURIComponent(accountSid)}/Marketplace/Products?${params}`;
 
   try {
     const response = await fetch(endpoint, {
@@ -44,6 +47,7 @@ export async function GET() {
     const products = listOf(data);
     return NextResponse.json({
       ok: true,
+      category: category ?? null,
       total: Number(data?.["@total"] ?? products.length),
       products: products.map((product: any) => ({
         id: product.ProductId ?? product.Id ?? product.ProductID,
