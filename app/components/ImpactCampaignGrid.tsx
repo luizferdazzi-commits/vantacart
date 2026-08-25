@@ -13,14 +13,14 @@ const editorialRank=['pixverse','creao','riibase','vidu','gamsgo','appy pie','lo
 
 function slugify(value:string){return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
 function landingUrl(c:Campaign,lang:Lang){const n=`${c.name} ${c.advertiser}`.toLowerCase();if(n.includes('creao'))return `/offers/creao?lang=${lang}`;if(n.includes('riibase'))return `/offers/riibase?lang=${lang}`;if(n.includes('protoarc'))return `/offers/protoarc?lang=${lang}`;if(n.includes('pixverse'))return `/offers/pixverse?lang=${lang}`;return `/offers/${slugify(c.name)}?lang=${lang}`;}
-function shortDescription(c:Campaign,lang:Lang){if(c.description)return c.description;return lang==='pt'?'Oferta ativa de parceiro aprovado na Impact.':'Active offer from an approved Impact partner.';}\nfunction isDigitalCampaign(c:Campaign){const s=\`${c.name} ${c.advertiser} ${c.description||''}\`.toLowerCase();return !/protoarc|keyboard|mouse|ergonomic|workspace|desk|home office/.test(s);}
+function shortDescription(c:Campaign,lang:Lang){if(c.description)return c.description;return lang==='pt'?'Oferta ativa de parceiro aprovado na Impact.':'Active offer from an approved Impact partner.';}
+function isDigitalCampaign(c:Campaign){const s=`${c.name} ${c.advertiser} ${c.description||''}`.toLowerCase();return !/protoarc|keyboard|mouse|ergonomic|workspace|desk|home office/.test(s);}
 function categoryOf(c:Campaign):Category{
   const s=`${c.name} ${c.advertiser} ${c.description||''}`.toLowerCase();
-  if(/protoarc|keyboard|mouse|ergonomic|workspace|desk|home office/.test(s))return 'home';
   if(/pixverse|vidu|video|image|creator|creative|design|film|audio/.test(s))return 'creators';
   if(/riibase|crm|sales|business|marketing|customer/.test(s))return 'business';
+  if(/gamsgo|productivity|workflow|organize|subscription/.test(s))return 'productivity';
   if(/creao|lorka|wizstar|appy pie|artificial intelligence|\bai\b|\bai |automation|agent/.test(s))return 'ai';
-  if(/productivity|workflow|organize|subscription/.test(s))return 'productivity';
   return 'technology';
 }
 function score(c:Campaign){const n=`${c.name} ${c.advertiser}`.toLowerCase();const idx=editorialRank.findIndex(k=>n.includes(k));return idx<0?0:100-idx*8;}
