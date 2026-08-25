@@ -1,0 +1,90 @@
+import { getHotmartAccessToken, type HotmartAffiliateOffer } from './hotmart';
+
+export type ResolvedPricing={
+  price?:number;
+  priceFrom?:number;
+  priceMax?:number;
+  currency?:string;
+  pricingType:'fixed'|'from'|'range'|'plans'|'unknown';
+  lastPriceCheck:string;
+  priceNote?:string;
+  priceSource:'catalog'|'hotmart_api'|'structured_data'|'page_data'|'unknown';
+  priceConfidence:'high'|'medium'|'low';
+};
+
+const SIX_HOURS=60*60*6;
+const money=(v:any)=>typeof v==='number'&&Number.isFinite(v)&&v>=0?v:undefined;
+const currency=(v:any)=>typeof v==='string'&&/^[A-Za-z]{3}$/.test(v.trim())?v.trim().toUpperCase():undefined;
+
+function manualPricing(offer:HotmartAffiliateOffer):ResolvedPricing|null{
+  const checked=offer.lastPriceCheck||new Date().toISOString();
+  if(offer.pricingType==='fixed'&&money(offer.price)!==undefined)return {price:offer.price,currency:offer.currency||'BRL',pricingType:'fixed',lastPriceCheck:checked,priceNote:offer.priceNote,priceSource:'catalog',priceConfidence:'high'};
+  if(offer.pricingType==='from'&&money(offer.priceFrom)!==undefined)return {priceFrom:offer.priceFrom,currency:offer.currency||'BRL',pricingType:'from',lastPriceCheck:checked,priceNote:offer.priceNote,priceSource:'catalog',priceConfidence:'high'};
+  if(offer.pricingType==='range'&&money(offer.priceFrom)!==undefined&&money(offer.priceMax)!==undefined)return {priceFrom:offer.priceFrom,priceMax:offer.priceMax,currency:offer.currency||'BRL',pricingType:'range',lastPriceCheck:checked,priceNote:offer.priceNote,priceSource:'catalog',priceConfidence:'high'};
+  return null;
+}
+
+async function hotmartApiPricing(ucode?:string):Promise<ResolvedPricing|null>{
+  if(!ucode||!/^[0-9a-f-]{30,40}$/i.test(ucode))return null;
+  try{
+    const token=await getHotmartAccessToken();
+    const headers={Authorization:`Bearer ${token}`,Accept:'application/json'};
+    const base=`https://developers.hotmart.com/products/api/v1/products/${encodeURIComponent(ucode)}`;
+    const [offersRes,plansRes]=await Promise.all([
+      fetch(`${base}/offers?max_results=50`,{headers,next:{revalidate:SIX_HOURS}}),
+      fetch(`${base}/plans?max_results=50`,{headers,next:{revalidate:SIX_HOURS}}),
+    ]);
+    const offers=offersRes.ok?await offersRes.json().catch(()=>null):null;
+    const plans=plansRes.ok?await plansRes.json().catch(()=>null):null;
+    const offerItems=Array.isArray(offers?.items)?offers.items:[];
+    const planItems=Array.isArray(plans?.items)?plans.items:[];
+    const checked=new Date().toISOString();
+    if(offerItems.length){
+      const main=offerItems.find((x:any)=>x?.is_main_offer)||offerItems[0];
+      const value=money(main?.price?.value);const curr=currency(main?.price?.currency_code);
+      if(value!==undefined&&curr)return {price:value,currency:curr,pricingType:'fixed',lastPriceCheck:checked,priceNote:'Preço obtido pela API oficial da Hotmart.',priceSource:'hotmart_api',priceConfidence:'high'};
+    }
+    const values=planItems.map((x:any)=>({value:money(x?.price?.value),currency:currency(x?.price?.currency_code)})).filter((x:any)=>x.value!==undefined&&x.currency);
+    if(values.length){
+      const curr=values[0].currency;const same=values.filter((x:any)=>x.currency===curr).map((x:any)=>x.value as number).sort((a:number,b:number)=>a-b);
+      if(same.length===1)return {price:same[0],currency:curr,pricingType:'fixed',lastPriceCheck:checked,priceNote:'Preço de plano obtido pela API oficial da Hotmart.',priceSource:'hotmart_api',priceConfidence:'high'};
+      if(same.length>1)return {priceFrom:same[0],priceMax:same[same.length-1],currency:curr,pricingType:'range',lastPriceCheck:checked,priceNote:'Faixa de planos obtida pela API oficial da Hotmart.',priceSource:'hotmart_api',priceConfidence:'high'};
+    }
+  }catch{}
+  return null;
+}
+
+function parseJsonLd(html:string):ResolvedPricing|null{
+  const scripts=[...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]);
+  const found:{value:number;currency:string}[]=[];
+  const walk=(v:any)=>{if(!v||typeof v!=='object')return;if(Array.isArray(v)){v.forEach(walk);return;}const val=money(v.price??v.lowPrice);const curr=currency(v.priceCurrency);if(val!==undefined&&curr)found.push({value:val,currency:curr});Object.values(v).forEach(walk);};
+  for(const raw of scripts){try{walk(JSON.parse(raw));}catch{}}
+  if(!found.length)return null;
+  const curr=found[0].currency;const values=[...new Set(found.filter(x=>x.currency===curr).map(x=>x.value))].sort((a,b)=>a-b);const checked=new Date().toISOString();
+  if(values.length===1)return {price:values[0],currency:curr,pricingType:'fixed',lastPriceCheck:checked,priceNote:'Preço confirmado em dados estruturados da página oficial.',priceSource:'structured_data',priceConfidence:'high'};
+  return {priceFrom:values[0],priceMax:values[values.length-1],currency:curr,pricingType:'range',lastPriceCheck:checked,priceNote:'Faixa de preços confirmada em dados estruturados da página oficial.',priceSource:'structured_data',priceConfidence:'high'};
+}
+
+function parsePageData(html:string):ResolvedPricing|null{
+  const metaPrice=html.match(/(?:itemprop=["']price["'][^>]*content|property=["']product:price:amount["'][^>]*content)=["']([0-9.,]+)["']/i)?.[1];
+  const metaCurrency=html.match(/(?:itemprop=["']priceCurrency["'][^>]*content|property=["']product:price:currency["'][^>]*content)=["']([A-Za-z]{3})["']/i)?.[1];
+  if(metaPrice&&metaCurrency){const n=Number(metaPrice.replace(/,/g,'.'));if(Number.isFinite(n)&&n>=0)return {price:n,currency:metaCurrency.toUpperCase(),pricingType:'fixed',lastPriceCheck:new Date().toISOString(),priceNote:'Preço confirmado em metadados da página oficial.',priceSource:'page_data',priceConfidence:'high'};}
+  const embedded=html.match(/["']price["']\s*:\s*\{[^{}]{0,180}?["']value["']\s*:\s*([0-9.]+)[^{}]{0,180}?["']currency_code["']\s*:\s*["']([A-Za-z]{3})["']/i);
+  if(embedded){const n=Number(embedded[1]);if(Number.isFinite(n)&&n>=0)return {price:n,currency:embedded[2].toUpperCase(),pricingType:'fixed',lastPriceCheck:new Date().toISOString(),priceNote:'Preço encontrado em dados da página oficial; confirme no checkout em caso de promoção.',priceSource:'page_data',priceConfidence:'medium'};}
+  return null;
+}
+
+async function webpagePricing(url:string):Promise<ResolvedPricing|null>{
+  try{
+    const res=await fetch(url,{redirect:'follow',headers:{'User-Agent':'Mozilla/5.0 (compatible; VantaCartPriceBot/1.0; +https://vantacart.vercel.app)','Accept':'text/html,application/xhtml+xml'},next:{revalidate:SIX_HOURS}});
+    if(!res.ok)return null;const type=res.headers.get('content-type')||'';if(!type.includes('text/html'))return null;const html=(await res.text()).slice(0,2_000_000);
+    return parseJsonLd(html)||parsePageData(html);
+  }catch{return null;}
+}
+
+export async function resolveHotmartPricing(offer:HotmartAffiliateOffer):Promise<ResolvedPricing>{
+  const manual=manualPricing(offer);if(manual)return manual;
+  const viaApi=await hotmartApiPricing(offer.ucode);if(viaApi)return viaApi;
+  const viaPage=await webpagePricing(offer.hotlink);if(viaPage)return viaPage;
+  return {pricingType:offer.pricingType==='plans'?'plans':'unknown',currency:offer.currency,lastPriceCheck:new Date().toISOString(),priceNote:offer.priceNote||'Preço não pôde ser confirmado automaticamente; consulte a oferta oficial.',priceSource:'unknown',priceConfidence:'low'};
+}
