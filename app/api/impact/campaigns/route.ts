@@ -57,11 +57,14 @@ function parseVisiblePrices(html:string):Pricing|null{
   for(const [re,curr] of patterns){
     const values=[...text.matchAll(re)].map(m=>numberOf(m[1])).filter((n):n is number=>n!==undefined&&n>0&&n<1_000_000);
     const unique=[...new Set(values)].sort((a,b)=>a-b);
-    // Visible-text extraction is deliberately conservative: require pricing context and avoid noisy pages.
-    if(unique.length&&/(pricing|price|plans?|assinatura|subscription|mensal|monthly|annual|yearly|comprar|buy)/i.test(text)){
-      const common={currency:curr,lastPriceCheck:new Date().toISOString(),priceSource:'page_data' as const,priceConfidence:'medium' as const,priceNote:'Preço identificado automaticamente na página oficial do parceiro; confirme a condição final no checkout.'};
-      return unique.length===1?{...common,price:unique[0],pricingType:'fixed'}:{...common,priceFrom:unique[0],priceMax:unique[unique.length-1],pricingType:'range'};
-    }
+    if(!unique.length||!/(pricing|price|plans?|assinatura|subscription|mensal|monthly|annual|yearly|comprar|buy)/i.test(text))continue;
+    const min=unique[0],max=unique[unique.length-1];
+    // Visible text is lower confidence. Reject obvious noise such as cents, token costs,
+    // usage-unit prices or wildly unrelated numbers captured from marketing copy.
+    if(min<2)return null;
+    if(unique.length>1&&max/min>50)return null;
+    const common={currency:curr,lastPriceCheck:new Date().toISOString(),priceSource:'page_data' as const,priceConfidence:'medium' as const,priceNote:'Preço identificado automaticamente na página oficial do parceiro; confirme a condição final no checkout.'};
+    return unique.length===1?{...common,price:min,pricingType:'fixed'}:{...common,priceFrom:min,priceMax:max,pricingType:'range'};
   }
   return null;
 }
