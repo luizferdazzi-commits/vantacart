@@ -21,7 +21,8 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "Impact credentials are not configured" }, { status: 500 });
   }
 
-  const endpoint = `https://api.impact.com/Mediapartners/${encodeURIComponent(accountSid)}/Marketplace/Products.json?PageSize=100`;
+  // Marketplace uses the v16 path exactly as documented (without the legacy .json suffix).
+  const endpoint = `https://api.impact.com/Mediapartners/${encodeURIComponent(accountSid)}/Marketplace/Products?PageSize=100`;
 
   try {
     const response = await fetch(endpoint, {
