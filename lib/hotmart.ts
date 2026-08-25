@@ -2,6 +2,7 @@ export type HotmartPricingType='fixed'|'from'|'range'|'plans'|'unknown';
 
 export type HotmartAffiliateOffer={
   id:string;
+  ucode?:string;
   name:string;
   producer?:string;
   description?:string;
@@ -31,6 +32,9 @@ export type HotmartAffiliateOffer={
  *
  * Pricing metadata is optional and only rendered when it is explicitly known.
  * Never infer a checkout price from Hotmart's marketplace "maximum price".
+ * When ucode (Hotmart product UUID) is available, the pricing resolver can use
+ * the official Product Offers / Product Plans APIs before falling back to the
+ * destination page's structured pricing data.
  */
 export function getHotmartAffiliateOffers():HotmartAffiliateOffer[]{
   const raw=process.env.HOTMART_AFFILIATE_OFFERS_JSON?.trim();
@@ -43,6 +47,7 @@ export function getHotmartAffiliateOffers():HotmartAffiliateOffer[]{
       typeof offer.hotlink==='string'&&/^https:\/\//i.test(offer.hotlink)
     ).map((offer:any)=>({
       ...offer,
+      ucode:typeof offer.ucode==='string'&&offer.ucode.trim()?offer.ucode.trim():undefined,
       currency:typeof offer.currency==='string'&&offer.currency.trim()?offer.currency.trim().toUpperCase():undefined,
       price:typeof offer.price==='number'&&Number.isFinite(offer.price)&&offer.price>=0?offer.price:undefined,
       priceFrom:typeof offer.priceFrom==='number'&&Number.isFinite(offer.priceFrom)&&offer.priceFrom>=0?offer.priceFrom:undefined,
