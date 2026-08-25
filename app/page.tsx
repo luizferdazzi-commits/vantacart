@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ImpactCampaignGrid from './components/ImpactCampaignGrid';
+import AffiliateContentHub from './components/AffiliateContentHub';
 import { Languages, Search, ShieldCheck, Sparkles, Tag, Zap, ChevronRight } from 'lucide-react';
 
 export const dynamic='force-dynamic';
@@ -51,6 +52,7 @@ export default async function Home({searchParams}:{searchParams:Promise<SearchPa
     <section className="marketSection" id="deals">
       <div className="marketSectionHead"><div><h2>🔥 {t.featured}</h2><p>{t.featuredSub}</p></div></div>
       <ImpactCampaignGrid lang={lang} initialQuery={q} initialCategory={category}/>
+      <AffiliateContentHub lang={lang}/>
       <div className="marketSectionHead"><div><h2>{t.categories}</h2></div></div>
       <div className="marketCategoryBar">{cats.map(([icon,name,cat])=><Link href={linkFor(cat)} key={name}><span>{icon}</span>{name}</Link>)}</div>
       <div className="marketTrust"><div><ShieldCheck size={22}/><span><b>{lang==='pt'?'Parceiros verificados':'Verified partners'}</b><p>{lang==='pt'?'Só mostramos programas ativos e aprovados.':'We only surface active, approved programs.'}</p></span></div><div><Zap size={22}/><span><b>{lang==='pt'?'Acesso direto':'Direct access'}</b><p>{lang==='pt'?'Você continua no site oficial do parceiro.':'You continue on the partner’s official website.'}</p></span></div><div><Tag size={22}/><span><b>{lang==='pt'?'Sem taxa adicional':'No extra fee'}</b><p>{lang==='pt'?'A indicação não aumenta o preço para você.':'Our referral does not increase your price.'}</p></span></div></div>
