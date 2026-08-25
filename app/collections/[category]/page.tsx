@@ -1,0 +1,24 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { ArrowLeft, CheckCircle2, Sparkles } from 'lucide-react';
+import ImpactCampaignGrid from '../../components/ImpactCampaignGrid';
+
+export const dynamic = 'force-dynamic';
+
+const collections = {
+  ai: { pt: ['IA & Software', 'Ferramentas de IA para criar, automatizar e colocar ideias em prática.', 'Explore soluções para agentes, automação, criação de conteúdo e construção de apps. Compare a proposta de cada parceiro e continue pelo link oficial rastreado.'], en: ['AI & Software', 'AI tools to create, automate and turn ideas into action.', 'Explore solutions for agents, automation, content creation and app building. Compare each partner offer and continue through the tracked official link.'] },
+  creators: { pt: ['Criadores & Vídeo', 'Ferramentas para transformar ideias em conteúdo visual de impacto.', 'Encontre plataformas para vídeo com IA, campanhas, conteúdo social e localização criativa. A contratação acontece diretamente no ambiente do parceiro.'], en: ['Creators & Video', 'Tools to turn ideas into high-impact visual content.', 'Find platforms for AI video, campaigns, social content and creative localization. Signup happens directly on the partner environment.'] },
+  business: { pt: ['Negócios & Vendas', 'Organize relacionamento, processos e oportunidades de crescimento.', 'Veja ofertas voltadas a CRM, produtividade comercial e automação. Escolha a solução que combina com a fase atual do seu negócio.'], en: ['Business & Sales', 'Organize relationships, processes and growth opportunities.', 'See offers for CRM, sales productivity and automation. Choose the solution that fits your business stage.'] },
+  home: { pt: ['Home Office', 'Construa uma estação de trabalho mais confortável e produtiva.', 'Explore acessórios ergonômicos e periféricos selecionados para quem trabalha, estuda ou cria por muitas horas no computador.'], en: ['Home Office', 'Build a more comfortable and productive workstation.', 'Explore selected ergonomic accessories and peripherals for people who work, study or create for long hours at a computer.'] },
+  productivity: { pt: ['Produtividade', 'Menos trabalho repetitivo. Mais espaço para o que importa.', 'Compare parceiros que ajudam a organizar rotinas, acelerar entregas e transformar tarefas em fluxos mais simples.'], en: ['Productivity', 'Less repetitive work. More room for what matters.', 'Compare partners that help organize routines, speed up delivery and turn tasks into simpler workflows.'] },
+  technology: { pt: ['Tecnologia', 'Soluções digitais selecionadas para trabalhar e criar melhor.', 'Descubra ferramentas e produtos de parceiros ativos. Use os filtros para encontrar rapidamente a oferta mais relevante.'], en: ['Technology', 'Selected digital solutions to work and create better.', 'Discover tools and products from active partners. Use filters to quickly find the most relevant offer.'] },
+} as const;
+type Category = keyof typeof collections;
+
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ category: string }>; searchParams: Promise<{ lang?: string }> }) {
+  const [{ category }, sp] = await Promise.all([params, searchParams]); const entry = collections[category as Category]; if (!entry) return {}; const text = entry[sp.lang === 'en' ? 'en' : 'pt']; return { title: `${text[0]} | VantaCart`, description: text[1] };
+}
+export default async function CollectionPage({ params, searchParams }: { params: Promise<{ category: string }>; searchParams: Promise<{ lang?: string }> }) {
+  const [{ category }, sp] = await Promise.all([params, searchParams]); const key = category as Category; const entry = collections[key]; if (!entry) notFound(); const lang = sp.lang === 'en' ? 'en' : 'pt'; const [title, subtitle, detail] = entry[lang]; const pt = lang === 'pt';
+  return <main className="collectionPage"><header className="collectionNav"><Link href={`/?lang=${lang}`} className="cleanLogo">Vanta<span>Cart</span></Link><Link href={`/?lang=${lang}`}><ArrowLeft size={16}/>{pt ? 'Voltar ao marketplace' : 'Back to marketplace'}</Link></header><section className="collectionHero"><div><span><Sparkles size={15}/>{pt ? 'COLEÇÃO DE OFERTAS' : 'OFFER COLLECTION'}</span><h1>{title}</h1><p>{subtitle}</p></div><div className="collectionHeroProof"><CheckCircle2 size={19}/><span><b>{pt ? 'Links oficiais rastreados' : 'Tracked official links'}</b><small>{pt ? 'Sem custo adicional para você' : 'No extra cost to you'}</small></span></div></section><section className="collectionBody"><p className="collectionIntro">{detail}</p><ImpactCampaignGrid lang={lang} initialCategory={key}/></section><footer className="collectionFooter">{pt ? 'Divulgação: alguns links são de afiliados. Podemos receber comissão sem custo adicional para você.' : 'Disclosure: some links are affiliate links. We may earn a commission at no extra cost to you.'}</footer></main>;
+}
