@@ -15,6 +15,7 @@ export type ResolvedPricing={
 const SIX_HOURS=60*60*6;
 const money=(v:any)=>typeof v==='number'&&Number.isFinite(v)&&v>=0?v:undefined;
 const currency=(v:any)=>typeof v==='string'&&/^[A-Za-z]{3}$/.test(v.trim())?v.trim().toUpperCase():undefined;
+const fetchHeaders={'User-Agent':'Mozilla/5.0 (compatible; VantaCartPriceBot/1.0; +https://vantacart.vercel.app)','Accept':'text/html,application/xhtml+xml'};
 
 function manualPricing(offer:HotmartAffiliateOffer):ResolvedPricing|null{
   const checked=offer.lastPriceCheck||new Date().toISOString();
@@ -74,12 +75,22 @@ function parsePageData(html:string):ResolvedPricing|null{
   return null;
 }
 
+function candidateLinks(html:string,baseUrl:string){
+  const out:string[]=[];for(const match of html.matchAll(/href=["']([^"'#]+)["']/gi)){try{const u=new URL(match[1],baseUrl);if(!/^https?:$/.test(u.protocol))continue;const s=`${u.hostname}${u.pathname}${u.search}`.toLowerCase();if(/checkout|pay\.hotmart|hotmart\.com|preco|preço|price|pricing|planos|plans|assinatura|subscription|comprar|buy/.test(s))out.push(u.toString());}catch{}}
+  return [...new Set(out)].slice(0,4);
+}
+
+async function fetchHtml(url:string){
+  try{const res=await fetch(url,{redirect:'follow',headers:fetchHeaders,next:{revalidate:SIX_HOURS}});if(!res.ok)return null;const type=res.headers.get('content-type')||'';if(!type.includes('text/html'))return null;return {html:(await res.text()).slice(0,2_000_000),url:res.url||url};}catch{return null;}
+}
+
 async function webpagePricing(url:string):Promise<ResolvedPricing|null>{
-  try{
-    const res=await fetch(url,{redirect:'follow',headers:{'User-Agent':'Mozilla/5.0 (compatible; VantaCartPriceBot/1.0; +https://vantacart.vercel.app)','Accept':'text/html,application/xhtml+xml'},next:{revalidate:SIX_HOURS}});
-    if(!res.ok)return null;const type=res.headers.get('content-type')||'';if(!type.includes('text/html'))return null;const html=(await res.text()).slice(0,2_000_000);
-    return parseJsonLd(html)||parsePageData(html);
-  }catch{return null;}
+  const first=await fetchHtml(url);if(!first)return null;
+  const direct=parseJsonLd(first.html)||parsePageData(first.html);if(direct)return direct;
+  for(const candidate of candidateLinks(first.html,first.url)){
+    const page=await fetchHtml(candidate);if(!page)continue;const price=parseJsonLd(page.html)||parsePageData(page.html);if(price)return {...price,priceNote:`${price.priceNote||'Preço confirmado automaticamente.'} Fonte secundária vinculada à página oficial.`};
+  }
+  return null;
 }
 
 export async function resolveHotmartPricing(offer:HotmartAffiliateOffer):Promise<ResolvedPricing>{
