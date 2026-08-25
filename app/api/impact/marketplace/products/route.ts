@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+const MARKETPLACE_PAGE_SIZE = 100;
 
 function authHeader(accountSid: string, authToken: string) {
   return `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
@@ -22,7 +23,7 @@ export async function GET() {
   }
 
   // Marketplace uses the v16 path exactly as documented (without the legacy .json suffix).
-  const endpoint = `https://api.impact.com/Mediapartners/${encodeURIComponent(accountSid)}/Marketplace/Products?PageSize=100`;
+  const endpoint = `https://api.impact.com/Mediapartners/${encodeURIComponent(accountSid)}/Marketplace/Products?PageSize=${MARKETPLACE_PAGE_SIZE}`;
 
   try {
     const response = await fetch(endpoint, {
