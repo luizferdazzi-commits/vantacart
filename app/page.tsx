@@ -21,7 +21,7 @@ export default async function Home({searchParams}:{searchParams:Promise<SearchPa
   const lang:Lang=sp?.lang==='en'?'en':'pt';
   const t=copy[lang];const other=lang==='pt'?'en':'pt';const cats=lang==='pt'?catsPt:catsEn;
   const q=sp?.q||'';const category=sp?.category||'all';
-  const linkFor=(cat:string)=>`/?lang=${lang}&category=${cat}#deals`;
+  const linkFor=(cat:string)=>`/collections/${cat}?lang=${lang}`;
 
   return <main className="cleanMarket marketHomeV2">
     <style>{`
