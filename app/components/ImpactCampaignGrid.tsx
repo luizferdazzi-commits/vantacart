@@ -6,25 +6,26 @@ import { trackEvent } from './Analytics';
 
 type Lang='pt'|'en';
 type Campaign={id:string;name:string;advertiser:string;description?:string;url?:string;status?:string;trackingLink?:string;allowsDeeplinking?:string;type?:string};
-type Category='all'|'ai'|'business'|'home'|'creators'|'productivity'|'technology';
+type Category='all'|'ai'|'business'|'home'|'creators'|'productivity'|'technology'|'gaming';
 
-const CACHE_KEY='vantacart_active_impact_campaigns_v1';
-const editorialRank=['pixverse','creao','riibase','vidu','gamsgo','appy pie','lorka','wizstar'];
+const CACHE_KEY='vantacart_active_impact_campaigns_v2';
+const editorialRank=['gearup for mobile','gearup','movavi','pixverse','creao','riibase','protoarc','vidu','gamsgo','appy pie','lorka','wizstar'];
 
 function slugify(value:string){return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
 function landingUrl(c:Campaign,lang:Lang){const n=`${c.name} ${c.advertiser}`.toLowerCase();if(n.includes('creao'))return `/offers/creao?lang=${lang}`;if(n.includes('riibase'))return `/offers/riibase?lang=${lang}`;if(n.includes('protoarc'))return `/offers/protoarc?lang=${lang}`;if(n.includes('pixverse'))return `/offers/pixverse?lang=${lang}`;return `/offers/${slugify(c.name)}?lang=${lang}`;}
 function shortDescription(c:Campaign,lang:Lang){if(c.description)return c.description;return lang==='pt'?'Oferta ativa de parceiro aprovado na Impact.':'Active offer from an approved Impact partner.';}
-function isDigitalCampaign(c:Campaign){const s=`${c.name} ${c.advertiser} ${c.description||''}`.toLowerCase();return !/protoarc|keyboard|mouse|ergonomic|workspace|desk|home office/.test(s);}
 function categoryOf(c:Campaign):Category{
   const s=`${c.name} ${c.advertiser} ${c.description||''}`.toLowerCase();
-  if(/pixverse|vidu|video|image|creator|creative|design|film|audio/.test(s))return 'creators';
-  if(/riibase|crm|sales|business|marketing|customer/.test(s))return 'business';
+  if(/gearup|game booster|gaming|games|ping|packet loss|lag/.test(s))return 'gaming';
+  if(/protoarc|keyboard|mouse|ergonomic|workspace|desk|home office/.test(s))return 'home';
+  if(/pixverse|vidu|wizstar|movavi|video|image|creator|creative|design|film|audio|multimedia/.test(s))return 'creators';
+  if(/riibase|crm|sales|business|marketing|customer|accio|supplier|ecommerce|e-commerce/.test(s))return 'business';
   if(/gamsgo|productivity|workflow|organize|subscription/.test(s))return 'productivity';
-  if(/creao|lorka|wizstar|appy pie|artificial intelligence|\bai\b|\bai |automation|agent/.test(s))return 'ai';
+  if(/creao|lorka|verdent|medo|appy pie|presentation intelligence|deepvinci|artificial intelligence|\bai\b|\bai |automation|agent|app builder/.test(s))return 'ai';
   return 'technology';
 }
-function score(c:Campaign){const n=`${c.name} ${c.advertiser}`.toLowerCase();const idx=editorialRank.findIndex(k=>n.includes(k));return idx<0?0:100-idx*8;}
-function categoryLabel(cat:Category,lang:Lang){const pt:{[K in Category]:string}={all:'Todas',ai:'IA & Software',business:'Negócios',home:'Home office',creators:'Criadores',productivity:'Produtividade',technology:'Tecnologia'};const en:{[K in Category]:string}={all:'All',ai:'AI & Software',business:'Business',home:'Home office',creators:'Creators',productivity:'Productivity',technology:'Technology'};return (lang==='pt'?pt:en)[cat];}
+function score(c:Campaign){const n=`${c.name} ${c.advertiser}`.toLowerCase();const idx=editorialRank.findIndex(k=>n.includes(k));return idx<0?0:100-idx*7;}
+function categoryLabel(cat:Category,lang:Lang){const pt:{[K in Category]:string}={all:'Todas',ai:'IA & Software',business:'Negócios',home:'Home office',creators:'Criadores',productivity:'Produtividade',technology:'Tecnologia',gaming:'Gaming'};const en:{[K in Category]:string}={all:'All',ai:'AI & Software',business:'Business',home:'Home office',creators:'Creators',productivity:'Productivity',technology:'Technology',gaming:'Gaming'};return (lang==='pt'?pt:en)[cat];}
 
 function OfferCard({campaign,index,lang}:{campaign:Campaign;index:number;lang:Lang}){
   const ref=useRef<HTMLAnchorElement|null>(null);
@@ -33,7 +34,7 @@ function OfferCard({campaign,index,lang}:{campaign:Campaign;index:number;lang:La
     const obs=new IntersectionObserver(entries=>{if(!sent&&entries.some(e=>e.isIntersecting&&e.intersectionRatio>=.45)){sent=true;trackEvent('view_offer',{offer_id:campaign.id,offer_name:campaign.name,partner:campaign.advertiser,category:categoryOf(campaign),language:lang,rank_position:index+1});obs.disconnect();}},{threshold:[.45]});
     obs.observe(el);return()=>obs.disconnect();
   },[campaign,index,lang]);
-  const href=landingUrl(campaign,lang);const featured=score(campaign)>=68;
+  const href=landingUrl(campaign,lang);const featured=score(campaign)>=65;
   return <a ref={ref} key={campaign.id} className="cleanProduct" href={href}
     onClick={()=>{trackEvent('select_offer',{offer_id:campaign.id,partner:campaign.advertiser,offer_name:campaign.name,category:categoryOf(campaign),language:lang,rank_position:index+1,destination:'landing_page'});trackEvent('select_content',{content_type:'affiliate_offer',content_id:campaign.id,partner:campaign.advertiser,offer_name:campaign.name,language:lang,destination:'landing_page'});}}
     style={{textDecoration:'none',color:'inherit',overflow:'hidden'}}>
@@ -55,15 +56,15 @@ function OfferCard({campaign,index,lang}:{campaign:Campaign;index:number;lang:La
 }
 
 export default function ImpactCampaignGrid({lang,initialQuery='',initialCategory='all'}:{lang:Lang;initialQuery?:string;initialCategory?:string}){
-  const[campaigns,setCampaigns]=useState<Campaign[]>([]);const[loading,setLoading]=useState(true);const[query,setQuery]=useState(initialQuery);const[category,setCategory]=useState<Category>((['all','ai','business','home','creators','productivity','technology'].includes(initialCategory)?initialCategory:'all') as Category);
+  const[campaigns,setCampaigns]=useState<Campaign[]>([]);const[loading,setLoading]=useState(true);const[query,setQuery]=useState(initialQuery);const[category,setCategory]=useState<Category>((['all','ai','business','home','creators','productivity','technology','gaming'].includes(initialCategory)?initialCategory:'all') as Category);
 
   useEffect(()=>{
     let cancelled=false;
     try{const cached=localStorage.getItem(CACHE_KEY);if(cached){const parsed=JSON.parse(cached);if(Array.isArray(parsed)&&parsed.length)setCampaigns(parsed);}}catch{}
-    fetch('/api/impact/campaigns',{cache:'no-store'}).then(r=>r.json()).then(data=>{if(!cancelled&&data?.ok&&Array.isArray(data.campaigns)){const active=data.campaigns.filter((c:Campaign)=>c.status==='Active'&&c.trackingLink&&isDigitalCampaign(c));setCampaigns(active);try{localStorage.setItem(CACHE_KEY,JSON.stringify(active));}catch{}}}).catch(()=>{}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true};
+    fetch('/api/impact/campaigns',{cache:'no-store'}).then(r=>r.json()).then(data=>{if(!cancelled&&data?.ok&&Array.isArray(data.campaigns)){const active=data.campaigns.filter((c:Campaign)=>c.status==='Active'&&c.trackingLink);setCampaigns(active);try{localStorage.setItem(CACHE_KEY,JSON.stringify(active));}catch{}}}).catch(()=>{}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true};
   },[]);
 
-  const ranked=useMemo(()=>[...campaigns].filter(isDigitalCampaign).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name)),[campaigns]);
+  const ranked=useMemo(()=>[...campaigns].sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name)),[campaigns]);
   const filtered=useMemo(()=>{const q=query.trim().toLowerCase();return ranked.filter(c=>{const cat=categoryOf(c);const matchesCat=category==='all'||cat===category;const hay=`${c.name} ${c.advertiser} ${c.description||''}`.toLowerCase();return matchesCat&&(!q||hay.includes(q));});},[ranked,query,category]);
   const setFilter=(cat:Category)=>{setCategory(cat);trackEvent('filter_offers',{category:cat,language:lang});};
 
@@ -72,9 +73,9 @@ export default function ImpactCampaignGrid({lang,initialQuery='',initialCategory
       <label style={{height:42,display:'flex',alignItems:'center',gap:9,background:'#fff',border:'1px solid #dce4de',borderRadius:8,padding:'0 12px'}}><Search size={16} color="#64748b"/><input value={query} onChange={e=>setQuery(e.target.value)} onBlur={()=>query&&trackEvent('search_offers',{search_term:query,language:lang,results:filtered.length})} placeholder={lang==='pt'?'Buscar dentro das ofertas...':'Search within offers...'} style={{border:0,outline:0,width:'100%',fontSize:13,background:'transparent'}}/></label>
       <div style={{display:'flex',alignItems:'center',gap:7,color:'#64748b',fontSize:11,padding:'0 4px'}}><SlidersHorizontal size={15}/>{filtered.length} {lang==='pt'?'resultados':'results'}</div>
     </div>
-    <div style={{display:'flex',gap:7,overflowX:'auto',paddingBottom:10,marginBottom:5}}>{(['all','ai','business','home','creators','productivity','technology'] as Category[]).map(cat=><button key={cat} onClick={()=>setFilter(cat)} style={{whiteSpace:'nowrap',border:`1px solid ${category===cat?'#159447':'#dfe6e1'}`,background:category===cat?'#eaf8ef':'#fff',color:category===cat?'#116b37':'#334155',borderRadius:999,padding:'8px 11px',fontSize:11,fontWeight:800,cursor:'pointer'}}>{categoryLabel(cat,lang)}</button>)}</div>
+    <div style={{display:'flex',gap:7,overflowX:'auto',paddingBottom:10,marginBottom:5}}>{(['all','ai','business','gaming','home','creators','productivity','technology'] as Category[]).map(cat=><button key={cat} onClick={()=>setFilter(cat)} style={{whiteSpace:'nowrap',border:`1px solid ${category===cat?'#159447':'#dfe6e1'}`,background:category===cat?'#eaf8ef':'#fff',color:category===cat?'#116b37':'#334155',borderRadius:999,padding:'8px 11px',fontSize:11,fontWeight:800,cursor:'pointer'}}>{categoryLabel(cat,lang)}</button>)}</div>
 
-    {campaigns.length>0&&<div style={{display:'flex',alignItems:'center',gap:8,margin:'0 0 14px',fontSize:12,color:'#166534',fontWeight:800}}><CheckCircle2 size={16}/>{lang==='pt'?`${campaigns.length} parceiros Impact ativos • ordenados por relevância`:`${campaigns.length} active Impact partners • ranked by relevance`}</div>}
+    {campaigns.length>0&&<div style={{display:'flex',alignItems:'center',gap:8,margin:'0 0 14px',fontSize:12,color:'#166534',fontWeight:800}}><CheckCircle2 size={16}/>{lang==='pt'?`${campaigns.length} parceiros Impact ativos • todos com página própria`:`${campaigns.length} active Impact partners • each with its own page`}</div>}
 
     {loading&&!campaigns.length?<div className="cleanProducts">{Array.from({length:6}).map((_,i)=><div key={i} className="cleanProduct" style={{minHeight:330,background:'#fff'}}><div style={{height:190,background:'linear-gradient(90deg,#eef2ef,#f8faf8,#eef2ef)'}}/><div style={{padding:12}}><div style={{height:10,width:'45%',background:'#e5e9e6',borderRadius:6,marginBottom:10}}/><div style={{height:14,width:'80%',background:'#e5e9e6',borderRadius:6,marginBottom:8}}/><div style={{height:10,width:'95%',background:'#eef1ef',borderRadius:6}}/></div></div>)}</div>:
     filtered.length?<div className="cleanProducts">{filtered.map((campaign,index)=><OfferCard key={campaign.id} campaign={campaign} index={index} lang={lang}/>)}</div>:
