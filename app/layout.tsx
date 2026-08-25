@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './marketplace.css';
 import './cart.css';
+import './responsive.css';
 import { Analytics } from './components/Analytics';
 
 export const metadata: Metadata = {
