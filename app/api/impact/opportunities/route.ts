@@ -6,7 +6,7 @@ function authHeader(accountSid: string, authToken: string) {
   return `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
 }
 
-function digitalCategory(campaign: any) {
+function isDigitalCampaign(campaign: any) {\n  const text = \`${campaign?.CampaignName ?? ''} ${campaign?.AdvertiserName ?? ''} ${campaign?.CampaignDescription ?? ''}\`.toLowerCase();\n  return !/protoarc|keyboard|mouse|ergonomic|workspace|desk|home office/.test(text);\n}\n\nfunction digitalCategory(campaign: any) {
   const text = `${campaign?.CampaignName ?? ""} ${campaign?.AdvertiserName ?? ""} ${campaign?.CampaignDescription ?? ""}`.toLowerCase();
   if (/video|creator|pixverse|vidu|creao|lorka/.test(text)) return "IA e criação";
   if (/crm|riibase|appy pie|business|presentation|deepvinci/.test(text)) return "SaaS e negócios";
@@ -37,7 +37,7 @@ export async function GET() {
 
     const campaigns = Array.isArray(data?.Campaigns) ? data.Campaigns : [];
     const candidates = campaigns
-      .filter((campaign: any) => campaign.ContractStatus === "Active" && campaign.TrackingLink)
+      .filter((campaign: any) => campaign.ContractStatus === "Active" && campaign.TrackingLink && isDigitalCampaign(campaign))
       .map((campaign: any) => ({
         id: campaign.CampaignId,
         partner: campaign.AdvertiserName,
