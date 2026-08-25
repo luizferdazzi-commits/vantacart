@@ -1,3 +1,5 @@
+export type HotmartPricingType='fixed'|'from'|'range'|'plans'|'unknown';
+
 export type HotmartAffiliateOffer={
   id:string;
   name:string;
@@ -6,6 +8,13 @@ export type HotmartAffiliateOffer={
   hotlink:string;
   category?:string;
   active:boolean;
+  price?:number;
+  priceFrom?:number;
+  priceMax?:number;
+  currency?:string;
+  pricingType?:HotmartPricingType;
+  lastPriceCheck?:string;
+  priceNote?:string;
 };
 
 /**
@@ -19,6 +28,9 @@ export type HotmartAffiliateOffer={
  * Developers APIs are focused on account/business data and do not guarantee
  * discovery of the affiliate marketplace or automatic extraction of every
  * affiliate HotLink.
+ *
+ * Pricing metadata is optional and only rendered when it is explicitly known.
+ * Never infer a checkout price from Hotmart's marketplace "maximum price".
  */
 export function getHotmartAffiliateOffers():HotmartAffiliateOffer[]{
   const raw=process.env.HOTMART_AFFILIATE_OFFERS_JSON?.trim();
@@ -29,7 +41,16 @@ export function getHotmartAffiliateOffers():HotmartAffiliateOffer[]{
     return parsed.filter((offer:any)=>
       offer&&offer.active!==false&&typeof offer.id==='string'&&typeof offer.name==='string'&&
       typeof offer.hotlink==='string'&&/^https:\/\//i.test(offer.hotlink)
-    );
+    ).map((offer:any)=>({
+      ...offer,
+      currency:typeof offer.currency==='string'&&offer.currency.trim()?offer.currency.trim().toUpperCase():undefined,
+      price:typeof offer.price==='number'&&Number.isFinite(offer.price)&&offer.price>=0?offer.price:undefined,
+      priceFrom:typeof offer.priceFrom==='number'&&Number.isFinite(offer.priceFrom)&&offer.priceFrom>=0?offer.priceFrom:undefined,
+      priceMax:typeof offer.priceMax==='number'&&Number.isFinite(offer.priceMax)&&offer.priceMax>=0?offer.priceMax:undefined,
+      pricingType:['fixed','from','range','plans','unknown'].includes(offer.pricingType)?offer.pricingType:undefined,
+      lastPriceCheck:typeof offer.lastPriceCheck==='string'?offer.lastPriceCheck:undefined,
+      priceNote:typeof offer.priceNote==='string'?offer.priceNote:undefined
+    }));
   }catch{return [];}
 }
 
