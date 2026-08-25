@@ -6,7 +6,12 @@ function authHeader(accountSid: string, authToken: string) {
   return `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
 }
 
-function isDigitalCampaign(campaign: any) {\n  const text = \`${campaign?.CampaignName ?? ''} ${campaign?.AdvertiserName ?? ''} ${campaign?.CampaignDescription ?? ''}\`.toLowerCase();\n  return !/protoarc|keyboard|mouse|ergonomic|workspace|desk|home office/.test(text);\n}\n\nfunction digitalCategory(campaign: any) {
+function isDigitalCampaign(campaign: any) {
+  const text = `${campaign?.CampaignName ?? ''} ${campaign?.AdvertiserName ?? ''} ${campaign?.CampaignDescription ?? ''}`.toLowerCase();
+  return !/protoarc|keyboard|mouse|ergonomic|workspace|desk|home office/.test(text);
+}
+
+function digitalCategory(campaign: any) {
   const text = `${campaign?.CampaignName ?? ""} ${campaign?.AdvertiserName ?? ""} ${campaign?.CampaignDescription ?? ""}`.toLowerCase();
   if (/video|creator|pixverse|vidu|creao|lorka/.test(text)) return "IA e criação";
   if (/crm|riibase|appy pie|business|presentation|deepvinci/.test(text)) return "SaaS e negócios";
