@@ -63,39 +63,33 @@ function money(value:number,currency='BRL',lang:Lang='pt'){try{return new Intl.N
 function pricingLabel(c:Campaign,lang:Lang){const currency=c.currency||'BRL';if(c.pricingType==='fixed'&&typeof c.price==='number')return money(c.price,currency,lang);if(c.pricingType==='from'&&typeof c.priceFrom==='number')return `${lang==='pt'?'A partir de':'From'} ${money(c.priceFrom,currency,lang)}`;if(c.pricingType==='range'&&typeof c.priceFrom==='number'&&typeof c.priceMax==='number')return `${money(c.priceFrom,currency,lang)} – ${money(c.priceMax,currency,lang)}`;if(c.pricingType==='plans')return lang==='pt'?'Planos disponíveis':'Plans available';return lang==='pt'?'Ver preço oficial':'See official pricing';}
 function OfferCard({campaign,index,lang}:{campaign:Campaign;index:number;lang:Lang}){
   const ref=useRef<HTMLAnchorElement|null>(null);
-  useEffect(()=>{
-    let cancelled=false;
-    let cachedCampaigns:any[]=[];
-    try{
-      const cached=localStorage.getItem(CACHE_KEY);
-      if(cached){
-        cachedCampaigns=JSON.parse(cached);
-        setCampaigns(cachedCampaigns as Campaign[]);
-      }
-    }catch{}
-    Promise.allSettled([
-      fetch('/api/impact/campaigns',{cache:'no-store'}).then(r=>r.json()),
-      fetch('/api/hotmart/offers',{cache:'no-store'}).then(r=>r.json())
-    ]).then((results:any[])=>{
-      if(cancelled)return;
-      const impactOk=results[0]?.status==='fulfilled'&&results[0]?.value?.ok;
-      const hotmartOk=results[1]?.status==='fulfilled'&&results[1]?.value?.ok;
-      const cachedImpact=cachedCampaigns.filter((c:any)=>c.network==='impact');
-      const cachedHotmart=cachedCampaigns.filter((c:any)=>c.network==='hotmart');
-      const impact=impactOk
-        ? results[0].value.campaigns.filter((c:any)=>c.status==='Active'&&c.trackingLink).map((c:any)=>({...c,network:'impact'}))
-        : cachedImpact;
-      const hotmart=hotmartOk
-        ? results[1].value.offers.filter((o:any)=>o.active&&o.hotlink).map((o:any)=>({id:`hotmart-${o.id}`,name:o.name,advertiser:o.producer||o.name,description:o.description,trackingLink:o.hotlink,status:'Active',type:'Hotmart',network:'hotmart',category:o.category,price:o.price,priceFrom:o.priceFrom,priceMax:o.priceMax,currency:o.currency,pricingType:o.pricingType,lastPriceCheck:o.lastPriceCheck,priceNote:o.priceNote}))
-        : cachedHotmart;
-      const merged=[...impact,...hotmart];
-      if(merged.length){
-        setCampaigns(merged as Campaign[]);
-        try{localStorage.setItem(CACHE_KEY,JSON.stringify(merged));}catch{}
-      }
-    }).finally(()=>{if(!cancelled)setLoading(false)});
-    return()=>{cancelled=true};
-  },[]);
+  useEffect(()=>{const el=ref.current;if(!el)return;let sent=false;const obs=new IntersectionObserver(entries=>{if(!sent&&entries.some(e=>e.isIntersecting&&e.intersectionRatio>=.45)){sent=true;trackEvent('view_offer',{offer_id:campaign.id,offer_name:campaign.name,partner:campaign.advertiser,network:campaign.network||'impact',category:categoryOf(campaign),language:lang,rank_position:index+1});obs.disconnect();}},{threshold:[.45]});obs.observe(el);return()=>obs.disconnect();},[campaign,index,lang]);
+  const href=landingUrl(campaign,lang);const featured=score(campaign)>=65;const logo=brandLogo(campaign);const advertiserVisible=showAdvertiser(campaign);
+  return <a ref={ref} className="cleanProduct" href={href} onClick={()=>trackEvent('select_offer',{offer_id:campaign.id,partner:campaign.advertiser,offer_name:campaign.name,network:campaign.network||'impact',language:lang,destination:'landing_page'})} style={{textDecoration:'none',color:'inherit',overflow:'hidden'}}>
+    <div className="cleanProductImage" style={{minHeight:190,position:'relative',overflow:'hidden',background:'#f8faf9',padding:18,color:'#111827',borderBottom:'1px solid #e7ece8'}}>
+      <div style={{height:154,width:'100%',display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
+        <div style={{display:'flex',justifyContent:'space-between',gap:14,alignItems:'flex-start'}}>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-start',minWidth:0,paddingRight:4}}>
+            <span style={{fontSize:10,fontWeight:900,letterSpacing:1.3,color:'#64748b'}}>{categoryLabel(categoryOf(campaign),lang).toUpperCase()}</span>
+            <span className="cleanBadge" style={{position:'static',inset:'auto',transform:'none',marginTop:8,maxWidth:'100%',whiteSpace:'nowrap'}}>{featured?(lang==='pt'?'Destaque':'Featured'):(campaign.type||'Partner')}</span>
+          </div>
+          <div style={{width:68,height:68,flex:'0 0 68px',borderRadius:16,display:'grid',placeItems:'center',background:'#fff',border:'1px solid #dfe6e1',boxShadow:'0 5px 18px rgba(15,23,42,.07)'}}>{logo?<img src={logo} alt={`${campaign.advertiser} logo`} style={{width:48,height:48,objectFit:'contain'}}/>:<strong style={{fontSize:25,color:'#159447'}}>{campaign.advertiser.slice(0,1).toUpperCase()}</strong>}</div>
+        </div>
+        <div><div style={{fontSize:10,fontWeight:900,letterSpacing:1.2,color:'#159447'}}>VANTACART • {(campaign.network||'impact').toUpperCase()}</div><strong style={{display:'block',fontSize:20,lineHeight:1.12,marginTop:6,overflowWrap:'anywhere'}}>{campaign.name}</strong></div>
+      </div>
+    </div>
+    <div className="cleanProductBody">
+      {advertiserVisible&&<div style={{fontSize:10,fontWeight:800,color:'#64748b',marginBottom:7}}>{campaign.advertiser}</div>}
+      <div style={{fontSize:11,fontWeight:800,color:'#334155',padding:'8px 9px',background:'#f4f8f5',borderRadius:6}}>✓ {quickBenefit(campaign,lang)}</div>
+      <div style={{display:'flex',justifyContent:'space-between',gap:8,alignItems:'center',marginTop:8,padding:'9px 10px',border:'1px solid #e3eae5',borderRadius:8,background:'#fff'}}><span style={{fontSize:10,color:'#64748b',fontWeight:800}}>{lang==='pt'?'PREÇO':'PRICE'}</span><strong style={{fontSize:12,color:'#0f5132',textAlign:'right'}}>{pricingLabel(campaign,lang)}</strong></div>
+      <p style={{fontSize:11,lineHeight:1.45,color:'#64748b',margin:'8px 0 10px',minHeight:32}}>{conciseDescription(campaign,lang)}</p>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginTop:11}}><span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:10,color:'#64748b',fontWeight:700}}><i style={{width:7,height:7,borderRadius:999,background:'#16a34a',display:'inline-block'}}/>{lang==='pt'?'Ativo':'Active'}</span><span style={{display:'flex',alignItems:'center',gap:7,fontWeight:800,color:'#166534',fontSize:12,textAlign:'right'}}>{lang==='pt'?'Ver oferta e condições':'View offer & details'} <ArrowRight size={14}/></span></div>
+    </div>
+  </a>;
+}
+export default function ImpactCampaignGrid({lang,initialQuery='',initialCategory='all'}:{lang:Lang;initialQuery?:string;initialCategory?:string}){
+  const[campaigns,setCampaigns]=useState<Campaign[]>([]);const[loading,setLoading]=useState(true);const[query,setQuery]=useState(initialQuery);const[category,setCategory]=useState<Category>((['all','ai','business','home','creators','productivity','technology','gaming'].includes(initialCategory)?initialCategory:'all') as Category);
+  useEffect(()=>{let cancelled=false;let cachedCampaigns:Campaign[]=[];try{const cached=localStorage.getItem(CACHE_KEY);if(cached){cachedCampaigns=JSON.parse(cached);setCampaigns(cachedCampaigns)}}catch{}Promise.allSettled([fetch('/api/impact/campaigns',{cache:'no-store'}).then(r=>r.json()),fetch('/api/hotmart/offers',{cache:'no-store'}).then(r=>r.json())]).then(results=>{if(cancelled)return;const impactOk=results[0].status==='fulfilled'&&results[0].value?.ok;const hotmartOk=results[1].status==='fulfilled'&&results[1].value?.ok;const cachedImpact=cachedCampaigns.filter(c=>c.network==='impact');const cachedHotmart=cachedCampaigns.filter(c=>c.network==='hotmart');const impact=impactOk?results[0].value.campaigns.filter((c:Campaign)=>c.status==='Active'&&c.trackingLink).map((c:Campaign)=>({...c,network:'impact' as const})):cachedImpact;const hotmart=hotmartOk?results[1].value.offers.filter((o:any)=>o.active&&o.hotlink).map((o:any)=>({id:`hotmart-${o.id}`,name:o.name,advertiser:o.producer||o.name,description:o.description,trackingLink:o.hotlink,status:'Active',type:'Hotmart',network:'hotmart' as const,category:o.category,price:o.price,priceFrom:o.priceFrom,priceMax:o.priceMax,currency:o.currency,pricingType:o.pricingType,lastPriceCheck:o.lastPriceCheck,priceNote:o.priceNote})):cachedHotmart;const merged=[...impact,...hotmart];if(merged.length){setCampaigns(merged);try{localStorage.setItem(CACHE_KEY,JSON.stringify(merged));}catch{}}}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true}},[]);
   const ranked=useMemo(()=>[...campaigns].sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name)),[campaigns]);
   const filtered=useMemo(()=>{const q=query.trim().toLowerCase();return ranked.filter(c=>(category==='all'||categoryOf(c)===category)&&(!q||`${c.name} ${c.advertiser} ${c.description||''}`.toLowerCase().includes(q)))},[ranked,query,category]);
   return <><div style={{display:'grid',gridTemplateColumns:'minmax(220px,1fr) auto',gap:10,margin:'0 0 14px'}}><label style={{height:42,display:'flex',alignItems:'center',gap:9,background:'#fff',border:'1px solid #dce4de',borderRadius:8,padding:'0 12px'}}><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={lang==='pt'?'Buscar dentro das ofertas...':'Search within offers...'} style={{border:0,outline:0,width:'100%',fontSize:13,background:'transparent'}}/></label><div style={{display:'flex',alignItems:'center',gap:7,color:'#64748b',fontSize:11}}><SlidersHorizontal size={15}/>{filtered.length} {lang==='pt'?'resultados':'results'}</div></div><div style={{display:'flex',gap:7,overflowX:'auto',paddingBottom:10}}>{(['all','ai','business','gaming','home','creators','productivity','technology'] as Category[]).map(cat=><button key={cat} onClick={()=>setCategory(cat)} style={{whiteSpace:'nowrap',border:`1px solid ${category===cat?'#159447':'#dfe6e1'}`,background:category===cat?'#eaf8ef':'#fff',borderRadius:999,padding:'8px 11px',fontSize:11,fontWeight:800}}>{categoryLabel(cat,lang)}</button>)}</div>{loading&&!campaigns.length?<div style={{padding:30}}>Carregando ofertas...</div>:filtered.length?<div className="cleanProducts">{filtered.map((c,i)=><OfferCard key={`${c.network}-${c.id}`} campaign={c} index={i} lang={lang}/>)}</div>:<div style={{padding:30,background:'#fff'}}>{lang==='pt'?'Nenhuma oferta encontrada.':'No offers found.'}</div>}<div style={{display:'flex',alignItems:'center',gap:6,marginTop:14,fontSize:11,color:'#64748b'}}><ExternalLink size={12}/>{lang==='pt'?'Impact + Hotmart em uma única vitrine. Preços podem variar e a contratação é finalizada no site oficial do parceiro.':'Impact + Hotmart in one storefront. Pricing may vary and purchase is completed on the partner official site.'}</div></>;
