@@ -5,7 +5,7 @@ import { getHotmartAffiliateOffers } from '../../../lib/hotmart';
 
 export const dynamic='force-dynamic';
 type Lang='pt'|'en';
-const confirmedTrackingLinks:[RegExp,string][]=[[/gearup for mobile/i,'https://gearupapp.pxf.io/WOPvnP'],[/\bgearup\b/i,'https://gearup.sjv.io/qWGL75'],[/movavi/i,'https://movaviaffiliateprogram.sjv.io/E0YgmP']];
+const confirmedTrackingLinks:[RegExp,string][]=[[/gearup for mobile/i,'https://gearupapp.pxf.io/WOPvnP'],[/\bgearup\b/i,'https://gearup.sjv.io/qWGL75'],[/movavi/i,'https://movaviaffiliateprogram.sjv.io/E0YgmP'],[/domoai/i,'https://domoaipteltd.pxf.io/xJqMVy'],[/base44/i,'https://base44.pxf.io/c/7638042/2049275/25619?trafcat=lp']];
 function authHeader(accountSid:string,authToken:string){return `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`;}
 function slugify(value:string){return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
 function withConfirmedTrackingLink(campaign:GenericImpactCampaign):GenericImpactCampaign{const name=`${campaign.name} ${campaign.advertiser}`;const override=confirmedTrackingLinks.find(([pattern])=>pattern.test(name));return override?{...campaign,trackingLink:override[1]}:campaign;}
