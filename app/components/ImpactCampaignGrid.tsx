@@ -29,8 +29,25 @@ function conciseDescription(c:Campaign,lang:Lang){
   const lastSpace=cut.lastIndexOf(' ');
   return `${cut.slice(0,lastSpace>90?lastSpace:145).replace(/[,:;\-\s]+$/,'')}…`;
 }
-function brandDomain(c:Campaign){const text=`${c.name} ${c.advertiser}`;return brandDomains.find(([rx])=>rx.test(text))?.[1];}
-function brandLogo(c:Campaign){const domain=brandDomain(c);return domain?`https://www.google.com/s2/favicons?domain=${domain}&sz=128`:null;}
+function brandDomain(c:Campaign){
+  // Future-proof: always prefer the official campaign URL supplied by the affiliate network.
+  // This prevents new partners from falling back to a plain initial just because they are not
+  // in our editorial brand map yet.
+  if(c.url){
+    try{
+      const host=new URL(c.url).hostname.replace(/^www\./,'').toLowerCase();
+      if(host&&!/(^|\.)((sjv|pxf)\.io|impact\.com)$/.test(host))return host;
+    }catch{}
+  }
+  const text=`${c.name} ${c.advertiser}`;
+  return brandDomains.find(([rx])=>rx.test(text))?.[1];
+}
+function brandLogo(c:Campaign){
+  const domain=brandDomain(c);
+  // Google favicon service is intentionally used as a resilient logo resolver for both current
+  // and future partners; no manual whitelist is required when Impact provides the official URL.
+  return domain?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`:null;
+}
 function showAdvertiser(c:Campaign){
   const name=cleanText(c.name).toLowerCase();
   const advertiser=cleanText(c.advertiser||'').toLowerCase();
