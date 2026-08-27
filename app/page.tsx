@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import ImpactCampaignGrid from './components/ImpactCampaignGrid';
 import AffiliateContentHub from './components/AffiliateContentHub';
+import ActivePartnerCount from './components/ActivePartnerCount';
 import { Languages, Search, ShieldCheck, Sparkles, Tag, Zap, ChevronRight } from 'lucide-react';
 
 export const dynamic='force-dynamic';
@@ -46,7 +47,7 @@ export default async function Home({searchParams}:{searchParams:Promise<SearchPa
 
     <section className="marketHeroCompact"><div className="marketHeroCompactInner">
       <div className="heroCompactCopy"><div className="heroCompactBadge"><Sparkles size={14}/>{t.heroBadge}</div><h1>{t.heroTitle}</h1><p>{t.heroText}</p><a className="heroCompactCta" href="#deals">{t.heroCta}<ChevronRight size={15}/></a></div>
-      <div className="heroCompactVisual"><div><b>10+</b><span>{lang==='pt'?'parceiros ativos':'active partners'}</span></div><div><b>24/7</b><span>{lang==='pt'?'vitrine online':'online storefront'}</span></div><div><b>↗</b><span>{lang==='pt'?'links rastreados':'tracked links'}</span></div><div><b>PT/EN</b><span>{lang==='pt'?'experiência bilíngue':'bilingual experience'}</span></div></div>
+      <div className="heroCompactVisual"><ActivePartnerCount lang={lang}/><div><b>24/7</b><span>{lang==='pt'?'vitrine online':'online storefront'}</span></div><div><b>↗</b><span>{lang==='pt'?'links rastreados':'tracked links'}</span></div><div><b>PT/EN</b><span>{lang==='pt'?'experiência bilíngue':'bilingual experience'}</span></div></div>
     </div></section>
 
     <section className="marketSection" id="deals">
