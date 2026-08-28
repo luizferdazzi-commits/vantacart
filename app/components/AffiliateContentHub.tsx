@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, BookOpen, CheckCircle2, Sparkles } from 'lucide-react';
+import ComparisonTool from './ComparisonTool';
 
 type Lang = 'pt' | 'en';
 
@@ -22,6 +23,7 @@ export default function AffiliateContentHub({ lang }: { lang: Lang }) {
   const pt = lang === 'pt';
   return <section className="affiliateHub" aria-label={pt ? 'Setores digitais da VantaCart' : 'VantaCart digital sectors'}>
     <div className="affiliateHubHead"><div><span><BookOpen size={15}/>{pt ? 'ESCOLHA POR NECESSIDADE' : 'CHOOSE BY NEED'}</span><h2>{pt ? 'Quatro setores para vender soluções digitais.' : 'Four sectors for digital solutions.'}</h2><p>{pt ? 'A VantaCart é uma curadoria de links de afiliados para software e assinaturas. Sem produto físico, estoque ou entrega: a contratação é concluída no parceiro oficial.' : 'VantaCart curates affiliate links for software and subscriptions. No physical product, inventory or shipping: signup is completed with the official partner.'}</p></div><Link href={`/collections/ai?lang=${lang}`}>{pt ? 'Explorar soluções' : 'Explore solutions'}<ArrowRight size={15}/></Link></div>
+    <ComparisonTool lang={lang}/>
     <div className="affiliateGuideGrid">{guides[lang].map((guide, index) => <article key={guide.category} className={`affiliateGuide guideTone${index + 1}`}><div className="guideIcon"><Sparkles size={19}/></div><span>{guide.kicker}</span><h3>{guide.title}</h3><p>{guide.text}</p><ul>{guide.points.map(point => <li key={point}><CheckCircle2 size={14}/>{point}</li>)}</ul><Link href={`/collections/${guide.category}?lang=${lang}`}>{pt ? 'Ver parceiros ativos' : 'View active partners'}<ArrowRight size={15}/></Link></article>)}</div>
   </section>;
 }
