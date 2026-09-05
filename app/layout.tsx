@@ -6,17 +6,78 @@ import './responsive.css';
 import './whatsapp.css';
 import { Analytics } from './components/Analytics';
 
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://vantacart.vercel.app').replace(/\/$/, '');
+
 export const metadata: Metadata = {
-  title: 'VantaCart — Curadoria de Software, IA e Serviços Digitais',
-  description: 'Curadoria de software, IA, SaaS e serviços digitais de parceiros aprovados. Compare opções e finalize a contratação diretamente no site oficial do parceiro.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'VantaCart — Software, IA, SaaS e Ofertas Selecionadas',
+    template: '%s | VantaCart',
+  },
+  description: 'Compare software, IA, SaaS e serviços digitais de parceiros selecionados. Descubra ofertas, alternativas e ferramentas para negócios e criadores.',
+  applicationName: 'VantaCart',
+  category: 'technology',
+  alternates: {
+    canonical: '/',
+    languages: {
+      'pt-BR': '/?lang=pt',
+      'en': '/?lang=en',
+      'x-default': '/',
+    },
+  },
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName: 'VantaCart',
+    title: 'VantaCart — Software, IA, SaaS e Ofertas Selecionadas',
+    description: 'Compare ferramentas digitais, software, IA e SaaS selecionados e contrate diretamente no site oficial de cada parceiro.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'VantaCart — Software, IA, SaaS e Ofertas Selecionadas',
+    description: 'Compare ferramentas digitais, software, IA e SaaS selecionados.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
 };
 
 const whatsappHref = 'https://wa.me/5555984572523?text=Ol%C3%A1%21%20Vim%20pela%20VantaCart%20e%20gostaria%20de%20falar%20sobre%20publicidade%20ou%20parceria.';
 
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'VantaCart',
+  url: SITE_URL,
+  description: 'Curadoria e comparação de software, IA, SaaS e serviços digitais.',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${SITE_URL}/?q={search_term_string}`,
+    'query-input': 'required name=search_term_string',
+  },
+};
+
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'VantaCart',
+  url: SITE_URL,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <body>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
         {children}
         <a
           className="vcWhatsapp"
